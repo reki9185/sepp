@@ -12,14 +12,14 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	"bitbucket.org/alanyang0903/sepp/consumer"
-	sepp_context "bitbucket.org/alanyang0903/sepp/context"
-	"bitbucket.org/alanyang0903/sepp/factory"
-	"bitbucket.org/alanyang0903/sepp/logger"
-	"bitbucket.org/alanyang0903/sepp/util"
+	// "github.com/yangalan0903/sepp/consumer"
+	sepp_context "github.com/yangalan0903/sepp/context"
+	"github.com/yangalan0903/sepp/factory"
+	"github.com/yangalan0903/sepp/logger"
+	"github.com/yangalan0903/sepp/util"
 	"github.com/free5gc/http2_util"
 	"github.com/free5gc/logger_util"
-	"bitbucket.org/alanyang0903/sepp/handshake"
+	// "github.com/yangalan0903/sepp/handshake"
 	openApiLogger "github.com/free5gc/openapi/logger"
 	"github.com/free5gc/path_util"
 	pathUtilLogger "github.com/free5gc/path_util/logger"
@@ -53,11 +53,11 @@ func init() {
 	initLog = logger.InitLog
 }
 
-func (*) GetCliCmd() (flags []cli.Flag) {
+func (*SEPP) GetCliCmd() (flags []cli.Flag) {
 	return seppCLi
 }
 
-func ( *SEPP) Initialize(c *cli.Context) error {
+func (sepp *SEPP) Initialize(c *cli.Context) error {
 	config = Config{
 		seppcfg: c.String("seppcfg"),
 	}
@@ -73,7 +73,7 @@ func ( *SEPP) Initialize(c *cli.Context) error {
 		}
 	}
 
-	.setLogLevel()
+	sepp.setLogLevel()
 
 	if err := factory.CheckConfigVersion(); err != nil {
 		return err
@@ -88,11 +88,11 @@ func ( *SEPP) setLogLevel() {
 		return
 	}
 
-	if factory.SeppConfig.Logger.SEPP != nil {
-		if factory.SeppConfig.Logger.SEPP.DebugLevel != "" {
-			if level, err := logrus.ParseLevel(factory.SeppConfig.Logger.SEPP.DebugLevel); err != nil {
+	if factory.SeppConfig.Logger.AUSF != nil {
+		if factory.SeppConfig.Logger.AUSF.DebugLevel != "" {
+			if level, err := logrus.ParseLevel(factory.SeppConfig.Logger.AUSF.DebugLevel); err != nil {
 				initLog.Warnf("SEPP Log level [%s] is invalid, set to [info] level",
-					factory.SeppConfig.Logger.SEPP.DebugLevel)
+					factory.SeppConfig.Logger.AUSF.DebugLevel)
 				logger.SetLogLevel(logrus.InfoLevel)
 			} else {
 				initLog.Infof("SEPP Log level is set to [%s] level", level)
@@ -102,7 +102,7 @@ func ( *SEPP) setLogLevel() {
 			initLog.Warnln("SEPP Log level not set. Default set to [info] level")
 			logger.SetLogLevel(logrus.InfoLevel)
 		}
-		logger.SetReportCaller(factory.SeppConfig.Logger.SEPP.ReportCaller)
+		logger.SetReportCaller(factory.SeppConfig.Logger.AUSF.ReportCaller)
 	}
 
 	if factory.SeppConfig.Logger.PathUtil != nil {
@@ -155,21 +155,21 @@ func (sepp *SEPP) Start() {
 	initLog.Infoln("Server started")
 
 	router := logger_util.NewGinWithLogrus(logger.GinLog)
-	handshake.AddService(router)
-	JOSEProtectedMessageForwarding.AddService(router)
-	TelescopicFqdnMapping.AddService(router)
+	// handshake.AddService(router)
+	// JOSEProtectedMessageForwarding.AddService(router)
+	// TelescopicFqdnMapping.AddService(router)
 
 	sepp_context.Init()
 	self := sepp_context.GetSelf()
 	// Register to NRF
-	profile, err := consumer.BuildNFInstance(self)
-	if err != nil {
-		initLog.Error("Build SEPP Profile Error")
-	}
-	_, self.NfId, err = consumer.SendRegisterNFInstance(self.NrfUri, self.NfId, profile)
-	if err != nil {
-		initLog.Errorf("SEPP register to NRF Error[%s]", err.Error())
-	}
+	// profile, err := consumer.BuildNFInstance(self)
+	// if err != nil {
+	// 	initLog.Error("Build SEPP Profile Error")
+	// }
+	// _, self.NfId, err = consumer.SendRegisterNFInstance(self.NrfUri, self.NfId, profile)
+	// if err != nil {
+	// 	initLog.Errorf("SEPP register to NRF Error[%s]", err.Error())
+	// }
 
 	seppLogPath := util.SeppLogPath
 
@@ -253,14 +253,14 @@ func (sepp *SEPP) Exec(c *cli.Context) error {
 func (sepp *SEPP) Terminate() {
 	logger.InitLog.Infof("Terminating SEPP...")
 	// deregister with NRF
-	problemDetails, err := consumer.SendDeregisterNFInstance()
-	if problemDetails != nil {
-		logger.InitLog.Errorf("Deregister NF instance Failed Problem[%+v]", problemDetails)
-	} else if err != nil {
-		logger.InitLog.Errorf("Deregister NF instance Error[%+v]", err)
-	} else {
-		logger.InitLog.Infof("Deregister from NRF successfully")
-	}
+	// problemDetails, err := consumer.SendDeregisterNFInstance()
+	// if problemDetails != nil {
+	// 	logger.InitLog.Errorf("Deregister NF instance Failed Problem[%+v]", problemDetails)
+	// } else if err != nil {
+	// 	logger.InitLog.Errorf("Deregister NF instance Error[%+v]", err)
+	// } else {
+	// 	logger.InitLog.Infof("Deregister from NRF successfully")
+	// }
 
 	logger.InitLog.Infof("SEPP terminated")
 }

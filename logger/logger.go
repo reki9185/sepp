@@ -16,8 +16,8 @@ var (
 	AppLog              *logrus.Entry
 	InitLog             *logrus.Entry
 	CfgLog              *logrus.Entry
-	UeAuthPostLog       *logrus.Entry
-	Auth5gAkaComfirmLog *logrus.Entry
+	N32fTerminate       *logrus.Entry
+	ExchangeCapability  *logrus.Entry
 	EapAuthComfirmLog   *logrus.Entry
 	HandlerLog          *logrus.Entry
 	ContextLog          *logrus.Entry
@@ -50,9 +50,9 @@ func init() {
 	AppLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "App"})
 	InitLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Init"})
 	CfgLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "CFG"})
-	HandShakeLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "HandShakeLog"})
-	JOSEProtectLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "JOSEProtectLog"})
-	FQDNMapping = log.WithFields(logrus.Fields{"component": "SEPP", "category": "FQDNMapping"})
+	// HandShakeLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "HandShakeLog"})
+	// JOSEProtectLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "JOSEProtectLog"})
+	// FQDNMapping = log.WithFields(logrus.Fields{"component": "SEPP", "category": "FQDNMapping"})
 	HandlerLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Handler"})
 	ContextLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "ctx"})
 	ConsumerLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Consumer"})

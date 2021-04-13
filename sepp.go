@@ -6,12 +6,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
-	"bitbucket.org/alanyang0903/sepp/src/initialize_sepp/logger"
-	"bitbucket.org/alanyang0903/sepp/src/initialize_sepp/service"
+	"github.com/yangalan0903/sepp/logger"
+	"github.com/yangalan0903/sepp/service"
 	"github.com/free5gc/version"
 )
 
-var AUSF = &service.AUSF{}
+var SEPP = &service.SEPP{}
 
 var appLog *logrus.Entry
 
@@ -21,24 +21,24 @@ func init() {
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "ausf"
+	app.Name = "sepp"
 	fmt.Print(app.Name, "\n")
-	appLog.Infoln("AUSF version: ", version.GetVersion())
-	app.Usage = "-free5gccfg common configuration file -ausfcfg ausf configuration file"
+	appLog.Infoln("SEPP version: ", version.GetVersion())
+	app.Usage = "-free5gccfg common configuration file -seppcfg sepp configuration file"
 	app.Action = action
-	app.Flags = AUSF.GetCliCmd()
+	app.Flags = SEPP.GetCliCmd()
 	if err := app.Run(os.Args); err != nil {
-		appLog.Errorf("AUSF Run error: %v", err)
+		appLog.Errorf("SEPP Run error: %v", err)
 	}
 }
 
 func action(c *cli.Context) error {
-	if err := AUSF.Initialize(c); err != nil {
+	if err := SEPP.Initialize(c); err != nil {
 		logger.CfgLog.Errorf("%+v", err)
 		return fmt.Errorf("Failed to initialize !!")
 	}
 
-	AUSF.Start()
+	SEPP.Start()
 
 	return nil
 }

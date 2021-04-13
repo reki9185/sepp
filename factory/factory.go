@@ -9,17 +9,17 @@ import (
 	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
-	"bitbucket.org/alanyang0903/sepp/logger"
+	"github.com/yangalan0903/sepp/logger"
 )
 
-var AusfConfig Config
+var SeppConfig Config
 
 // TODO: Support configuration update from REST api
 func InitConfigFactory(f string) error {
 	if content, err := ioutil.ReadFile(f); err != nil {
 		return err
 	} else {
-		AusfConfig = Config{}
+		SeppConfig = Config{}
 
 		if yamlErr := yaml.Unmarshal(content, &SeppConfig); yamlErr != nil {
 			return yamlErr

@@ -7,34 +7,36 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/free5gc/ausf/factory"
-	"github.com/free5gc/ausf/logger"
+	"github.com/yangalan0903/sepp/factory"
+	"github.com/yangalan0903/sepp/logger"
 	"github.com/free5gc/openapi/models"
 	"github.com/free5gc/path_util"
 )
 
 func TestInit() {
 	// load config
-	DefaultAusfConfigPath := path_util.Free5gcPath("free5gc/config/ausfcfg.yaml")
-	if err := factory.InitConfigFactory(DefaultAusfConfigPath); err != nil {
+	DefaultSeppConfigPath := path_util.Free5gcPath("free5gc/config/seppcfg.yaml")
+	if err := factory.InitConfigFactory(DefaultSeppConfigPath); err != nil {
 		panic(err)
 	}
 	Init()
 }
 
-func InitAusfContext(context *AUSFContext) {
-	config := factory.AusfConfig
-	logger.InitLog.Infof("ausfconfig Info: Version[%s] Description[%s]\n", config.Info.Version, config.Info.Description)
+func InitSeppContext(context *SEPPContext) {
+	config := factory.SeppConfig
+	logger.InitLog.Infof("seppconfig Info: Version[%s] Description[%s]\n", config.Info.Version, config.Info.Description)
 
 	configuration := config.Configuration
 	sbi := configuration.Sbi
 
+	context.SupportedSecCapabilityList = append(context.SupportedSecCapabilityList, "TLS")
+	context.SupportedSecCapabilityList = append(context.SupportedSecCapabilityList, "PRINS")
+	context.PLMNSecInfo = make(map[string]SecInfo)
 	context.NfId = uuid.New().String()
-	context.GroupID = configuration.GroupId
 	context.NrfUri = configuration.NrfUri
 	context.UriScheme = models.UriScheme(configuration.Sbi.Scheme) // default uri scheme
-	context.RegisterIPv4 = factory.AUSF_DEFAULT_IPV4               // default localhost
-	context.SBIPort = factory.AUSF_DEFAULT_PORT_INT                // default port
+	context.RegisterIPv4 = factory.SEPP_DEFAULT_IPV4               // default localhost
+	context.SBIPort = factory.SEPP_DEFAULT_PORT_INT                // default port
 	if sbi != nil {
 		if sbi.RegisterIPv4 != "" {
 			context.RegisterIPv4 = sbi.RegisterIPv4
@@ -67,10 +69,10 @@ func InitAusfContext(context *AUSFContext) {
 	// context.NfService
 	context.NfService = make(map[models.ServiceName]models.NfService)
 	AddNfServices(&context.NfService, &config, context)
-	fmt.Println("ausf context = ", context)
+	fmt.Println("sepp context = ", context)
 }
 
-func AddNfServices(serviceMap *map[models.ServiceName]models.NfService, config *factory.Config, context *AUSFContext) {
+func AddNfServices(serviceMap *map[models.ServiceName]models.NfService, config *factory.Config, context *SEPPContext) {
 	var nfService models.NfService
 	var ipEndPoints []models.IpEndPoint
 	var nfServiceVersions []models.NfServiceVersion
