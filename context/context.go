@@ -7,10 +7,10 @@ import (
 	// "github.com/yangalan0903/sepp/logger"
 	"github.com/yangalan0903/sepp/models"
 )
-
+type FQDN = string
 type SEPPContext struct {
-	FQDN                       string
-	PLMNSecInfo                map[string]SecInfo
+	PLMNSecInfo                map[FQDN]SecInfo
+	NfId                       string
 	SupportedSecCapabilityList []models.SecurityCapability
 	SBIPort                    int
 	RegisterIPv4               string
@@ -18,12 +18,11 @@ type SEPPContext struct {
 	Url                        string
 	UriScheme                  models.UriScheme 
 	NrfUri                     string
-	NfService                  map[models.ServiceName]models.NfService
 	PlmnList                   []models.PlmnId
 }
 
 type SecInfo struct {
-	models.SecurityCapability
+	secCap models.SecurityCapability
 	
 }
 
@@ -37,6 +36,6 @@ func GetSelf() *SEPPContext {
 	return &seppContext
 }
 
-func (a *SEPPContext) GetSelfID() string {
-	return a.NfId
-}
+// func (a *SEPPContext) GetSelfID() string {
+// 	return a.NfId
+// }

@@ -16,9 +16,9 @@ import (
 
 	"github.com/yangalan0903/sepp/logger"
 	"github.com/yangalan0903/sepp/producer"
-	"bitbucket.org/free5gc-team/http_wrapper"
-	"bitbucket.org/free5gc-team/openapi"
-	"bitbucket.org/free5gc-team/openapi/models"
+	"github.com/free5gc/http_wrapper"
+	"github.com/yangalan0903/sepp/openapi"
+	"github.com/yangalan0903/sepp/models"
 )
 
 // PostExchangeCapability - Security Capability Negotiation

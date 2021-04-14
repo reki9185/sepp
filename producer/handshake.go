@@ -1,12 +1,29 @@
 package producer
 
 import (
-	"bitbucket.org/free5gc-team/http_wrapper"
+	// "context"
+	// "crypto/sha256"
+	// "encoding/base64"
+	// "encoding/hex"
+	// "fmt"
+	// "math/rand"
+	"net/http"
+	// "strings"
+	// "time"
+
+	// "github.com/bronze1man/radius"
+	// "github.com/google/gopacket"
+	// "github.com/google/gopacket/layers"
+
+	// "github.com/free5gc/UeauCommon"
+	// sepp_context "github.com/yangalan0903/sepp/context"
+	"github.com/yangalan0903/sepp/logger"
+	"github.com/free5gc/http_wrapper"
 	"github.com/yangalan0903/sepp/models"
 )
 
 func HandleN32fCtxTerminate(request *http_wrapper.Request) *http_wrapper.Response {
-	logger.PostN32fTerminate.Infof("handle PostN32fTerminate")
+	logger.N32fTerminate.Infof("handle PostN32fTerminate")
 
 	N32fContextInfo := request.Body.(models.N32fContextInfo)
 
@@ -26,13 +43,13 @@ func HandleN32fCtxTerminate(request *http_wrapper.Request) *http_wrapper.Respons
 
 func N32fCtxTerminateProcedure(N32fContextInfo models.N32fContextInfo) (*models.N32fContextInfo, 
 	*models.ProblemDetails) {
-
+	return nil,nil
 }
 
 func HandleExchangeCapability(request *http_wrapper.Request) *http_wrapper.Response {
 	logger.ExchangeCapability.Infof("handle ExchangeCapability")
 
-	secNegotiateReqData := request.Body.(models.secNegotiateReqData)
+	secNegotiateReqData := request.Body.(models.SecNegotiateReqData)
 
 	response, problemDetails := ExchangeCapabilityProcedure(secNegotiateReqData)
 
@@ -48,8 +65,10 @@ func HandleExchangeCapability(request *http_wrapper.Request) *http_wrapper.Respo
 	return http_wrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
 }
 
-func ExchangeCapabilityProcedure(secNegotiateReqData models.secNegotiateReqData) (*models.SecNegotiateRspData, 
+func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData) (*models.SecNegotiateRspData, 
 	*models.ProblemDetails) {
 	var responseBody models.SecNegotiateRspData
 
+	return nil,nil
+	
 }

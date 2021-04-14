@@ -12,14 +12,16 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	// "github.com/yangalan0903/sepp/consumer"
+	"github.com/yangalan0903/sepp/consumer"
 	sepp_context "github.com/yangalan0903/sepp/context"
 	"github.com/yangalan0903/sepp/factory"
 	"github.com/yangalan0903/sepp/logger"
 	"github.com/yangalan0903/sepp/util"
 	"github.com/free5gc/http2_util"
 	"github.com/free5gc/logger_util"
-	// "github.com/yangalan0903/sepp/handshake"
+	"github.com/yangalan0903/sepp/handshake"
+	"github.com/yangalan0903/sepp/JOSEProtectedMessageForwarding"
+	"github.com/yangalan0903/sepp/TelescopicFqdnMapping"
 	openApiLogger "github.com/free5gc/openapi/logger"
 	"github.com/free5gc/path_util"
 	pathUtilLogger "github.com/free5gc/path_util/logger"
@@ -155,21 +157,21 @@ func (sepp *SEPP) Start() {
 	initLog.Infoln("Server started")
 
 	router := logger_util.NewGinWithLogrus(logger.GinLog)
-	// handshake.AddService(router)
-	// JOSEProtectedMessageForwarding.AddService(router)
-	// TelescopicFqdnMapping.AddService(router)
+	handshake.AddService(router)
+	JOSEProtectedMessageForwarding.AddService(router)
+	TelescopicFqdnMapping.AddService(router)
 
 	sepp_context.Init()
 	self := sepp_context.GetSelf()
 	// Register to NRF
-	// profile, err := consumer.BuildNFInstance(self)
-	// if err != nil {
-	// 	initLog.Error("Build SEPP Profile Error")
-	// }
-	// _, self.NfId, err = consumer.SendRegisterNFInstance(self.NrfUri, self.NfId, profile)
-	// if err != nil {
-	// 	initLog.Errorf("SEPP register to NRF Error[%s]", err.Error())
-	// }
+	profile, err := consumer.BuildNFInstance(self)
+	if err != nil {
+		initLog.Error("Build SEPP Profile Error")
+	}
+	_, self.NfId, err = consumer.SendRegisterNFInstance(self.NrfUri, self.NfId, profile)
+	if err != nil {
+		initLog.Errorf("SEPP register to NRF Error[%s]", err.Error())
+	}
 
 	seppLogPath := util.SeppLogPath
 

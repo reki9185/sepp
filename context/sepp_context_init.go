@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-
 	"github.com/google/uuid"
 
 	"github.com/yangalan0903/sepp/factory"
 	"github.com/yangalan0903/sepp/logger"
-	"github.com/free5gc/openapi/models"
+	"github.com/yangalan0903/sepp/models"
 	"github.com/free5gc/path_util"
 )
 
@@ -27,12 +26,14 @@ func InitSeppContext(context *SEPPContext) {
 	logger.InitLog.Infof("seppconfig Info: Version[%s] Description[%s]\n", config.Info.Version, config.Info.Description)
 
 	configuration := config.Configuration
+	context.NfId = uuid.New().String()
 	sbi := configuration.Sbi
-
+	context.PLMNSecInfo = make(map[FQDN]SecInfo)
+	var secInfo SecInfo
+	secInfo.secCap = "TLS"
+	context.PLMNSecInfo [ "free5gc" ] = secInfo
 	context.SupportedSecCapabilityList = append(context.SupportedSecCapabilityList, "TLS")
 	context.SupportedSecCapabilityList = append(context.SupportedSecCapabilityList, "PRINS")
-	context.PLMNSecInfo = make(map[string]SecInfo)
-	context.NfId = uuid.New().String()
 	context.NrfUri = configuration.NrfUri
 	context.UriScheme = models.UriScheme(configuration.Sbi.Scheme) // default uri scheme
 	context.RegisterIPv4 = factory.SEPP_DEFAULT_IPV4               // default localhost
@@ -66,36 +67,5 @@ func InitSeppContext(context *SEPPContext) {
 	context.Url = string(context.UriScheme) + "://" + context.RegisterIPv4 + ":" + strconv.Itoa(context.SBIPort)
 	context.PlmnList = append(context.PlmnList, configuration.PlmnSupportList...)
 
-	// context.NfService
-	context.NfService = make(map[models.ServiceName]models.NfService)
-	AddNfServices(&context.NfService, &config, context)
 	fmt.Println("sepp context = ", context)
-}
-
-func AddNfServices(serviceMap *map[models.ServiceName]models.NfService, config *factory.Config, context *SEPPContext) {
-	var nfService models.NfService
-	var ipEndPoints []models.IpEndPoint
-	var nfServiceVersions []models.NfServiceVersion
-	services := *serviceMap
-
-	// nausf-auth
-	nfService.ServiceInstanceId = context.NfId
-	nfService.ServiceName = models.ServiceName_NAUSF_AUTH
-
-	var ipEndPoint models.IpEndPoint
-	ipEndPoint.Ipv4Address = context.RegisterIPv4
-	ipEndPoint.Port = int32(context.SBIPort)
-	ipEndPoints = append(ipEndPoints, ipEndPoint)
-
-	var nfServiceVersion models.NfServiceVersion
-	nfServiceVersion.ApiFullVersion = config.Info.Version
-	nfServiceVersion.ApiVersionInUri = "v1"
-	nfServiceVersions = append(nfServiceVersions, nfServiceVersion)
-
-	nfService.Scheme = context.UriScheme
-	nfService.NfServiceStatus = models.NfServiceStatus_REGISTERED
-
-	nfService.IpEndPoints = &ipEndPoints
-	nfService.Versions = &nfServiceVersions
-	services[models.ServiceName_NAUSF_AUTH] = nfService
 }

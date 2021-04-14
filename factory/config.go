@@ -6,7 +6,7 @@ package factory
 
 import (
 	"github.com/free5gc/logger_util"
-	"github.com/free5gc/openapi/models"
+	"github.com/yangalan0903/sepp/models"
 )
 
 const (
