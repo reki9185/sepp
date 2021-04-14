@@ -8,7 +8,7 @@ import (
 
 	"github.com/yangalan0903/sepp/factory"
 	"github.com/yangalan0903/sepp/logger"
-	"github.com/yangalan0903/sepp/models"
+	"github.com/yangalan0903/sepp/openapi/models"
 	"github.com/free5gc/path_util"
 )
 

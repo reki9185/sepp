@@ -11,7 +11,7 @@ import (
 	"github.com/yangalan0903/sepp/logger"
 	"github.com/yangalan0903/sepp/openapi"
 	"github.com/yangalan0903/sepp/openapi/Nnrf_NFManagement"
-	"github.com/yangalan0903/sepp/models"
+	"github.com/yangalan0903/sepp/openapi/models"
 )
 
 func BuildNFInstance(seppContext *sepp_context.SEPPContext) (profile models.NfProfile, err error) {

@@ -5,7 +5,7 @@ import (
 	// "sync"
 
 	// "github.com/yangalan0903/sepp/logger"
-	"github.com/yangalan0903/sepp/models"
+	"github.com/yangalan0903/sepp/openapi/models"
 )
 type FQDN = string
 type SEPPContext struct {

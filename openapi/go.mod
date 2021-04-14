@@ -1,4 +1,4 @@
-module bitbucket.org/free5gc-team/openapi
+module "github.com/yangalan0903/sepp/openapi
 
 go 1.14
 
