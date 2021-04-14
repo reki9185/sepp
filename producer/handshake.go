@@ -19,7 +19,7 @@ import (
 	// sepp_context "github.com/yangalan0903/sepp/context"
 	"github.com/yangalan0903/sepp/logger"
 	"github.com/free5gc/http_wrapper"
-	"github.com/yangalan0903/sepp/openapi/models"
+	"github.com/yangalan0903/openapi/models"
 )
 
 func HandleN32fCtxTerminate(request *http_wrapper.Request) *http_wrapper.Response {
