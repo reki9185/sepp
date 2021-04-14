@@ -22,7 +22,7 @@ import (
 	"github.com/yangalan0903/sepp/handshake"
 	"github.com/yangalan0903/sepp/JOSEProtectedMessageForwarding"
 	"github.com/yangalan0903/sepp/TelescopicFqdnMapping"
-	openApiLogger "github.com/free5gc/openapi/logger"
+	openApiLogger "github.com/yangalan0903/openapi/logger"
 	"github.com/free5gc/path_util"
 	pathUtilLogger "github.com/free5gc/path_util/logger"
 )
