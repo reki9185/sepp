@@ -13,7 +13,7 @@ package Nausf_SoRProtection
 
 import (
 	"crypto/tls"
-	"bitbucket.org/free5gc-team/http2_util"
+	"github.com/free5gc/http2_util"
 	"net/http"
 
 	"golang.org/x/net/http2"

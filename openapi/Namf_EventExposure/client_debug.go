@@ -15,7 +15,7 @@ import (
 	"crypto/tls"
 	"golang.org/x/net/http2"
 	"net/http"
-	"bitbucket.org/free5gc-team/http2_util"
+	"github.com/free5gc/http2_util"
 )
 
 // APIClient manages communication with the Namf_EventExposure API v1.0.0

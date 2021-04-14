@@ -3,9 +3,9 @@ module "github.com/yangalan0903/sepp/openapi
 go 1.14
 
 require (
-	bitbucket.org/free5gc-team/http2_util v0.0.0-20200915033753-44c1ee32f9a4
-	bitbucket.org/free5gc-team/logger_conf v0.0.0-20200915032859-681c48762af1
-	bitbucket.org/free5gc-team/logger_util v0.0.0-20200915032249-cd1bf694e835
+	github.com/free5gc/http2_util v0.0.0-20200915033753-44c1ee32f9a4
+	github.com/free5gc/logger_conf v0.0.0-20200915032859-681c48762af1
+	github.com/free5gc/logger_util v0.0.0-20200915032249-cd1bf694e835
 	github.com/antihax/optional v1.0.0
 	github.com/antonfisher/nested-logrus-formatter v1.2.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
