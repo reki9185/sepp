@@ -9,6 +9,7 @@ import (
 )
 type FQDN = string
 type SEPPContext struct {
+	FqdnList                   []FQDN
 	PLMNSecInfo                map[FQDN]SecInfo
 	NfId                       string
 	SupportedSecCapabilityList []models.SecurityCapability

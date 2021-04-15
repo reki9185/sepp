@@ -255,14 +255,14 @@ func (sepp *SEPP) Exec(c *cli.Context) error {
 func (sepp *SEPP) Terminate() {
 	logger.InitLog.Infof("Terminating SEPP...")
 	// deregister with NRF
-	// problemDetails, err := consumer.SendDeregisterNFInstance()
-	// if problemDetails != nil {
-	// 	logger.InitLog.Errorf("Deregister NF instance Failed Problem[%+v]", problemDetails)
-	// } else if err != nil {
-	// 	logger.InitLog.Errorf("Deregister NF instance Error[%+v]", err)
-	// } else {
-	// 	logger.InitLog.Infof("Deregister from NRF successfully")
-	// }
+	problemDetails, err := consumer.SendDeregisterNFInstance()
+	if problemDetails != nil {
+		logger.InitLog.Errorf("Deregister NF instance Failed Problem[%+v]", problemDetails)
+	} else if err != nil {
+		logger.InitLog.Errorf("Deregister NF instance Error[%+v]", err)
+	} else {
+		logger.InitLog.Infof("Deregister from NRF successfully")
+	}
 
 	logger.InitLog.Infof("SEPP terminated")
 }

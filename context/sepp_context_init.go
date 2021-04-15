@@ -27,11 +27,13 @@ func InitSeppContext(context *SEPPContext) {
 
 	configuration := config.Configuration
 	context.NfId = uuid.New().String()
+	context.FqdnList = append(context.FqdnList, configuration.fqdnSupportList...)
 	sbi := configuration.Sbi
 	context.PLMNSecInfo = make(map[FQDN]SecInfo)
-	var secInfo SecInfo
-	secInfo.secCap = "TLS"
-	context.PLMNSecInfo [ "free5gc" ] = secInfo
+	for index := range context.FqdnList {
+		var secInfo SecInfo
+		context.PLMNSecInfo [context.FqdnList[index]] = secInfo
+	}
 	context.SupportedSecCapabilityList = append(context.SupportedSecCapabilityList, "TLS")
 	context.SupportedSecCapabilityList = append(context.SupportedSecCapabilityList, "PRINS")
 	context.NrfUri = configuration.NrfUri

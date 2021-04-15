@@ -32,7 +32,7 @@ const (
 
 type Configuration struct {
 	Sbi             *Sbi            `yaml:"sbi,omitempty"`
-	ServiceNameList []string        `yaml:"serviceNameList,omitempty"`
+	fqdnSupportList []string        `yaml:"fqdnSupportList,omitempty"`
 	NrfUri          string          `yaml:"nrfUri,omitempty"`
 	PlmnSupportList []models.PlmnId `yaml:"plmnSupportList,omitempty"`
 	GroupId         string          `yaml:"groupId,omitempty"`

@@ -22,7 +22,7 @@ import (
 )
 
 // PostExchangeCapability - Security Capability Negotiation
-func PostExchangeCapability(c *gin.Context) {
+func PostExchangeCapability(ctx *gin.Context) {
 	var SecNegotiateReqData models.SecNegotiateReqData
 
 	requestBody, err := ctx.GetRawData()

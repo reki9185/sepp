@@ -68,7 +68,6 @@ func HandleExchangeCapability(request *http_wrapper.Request) *http_wrapper.Respo
 func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData) (*models.SecNegotiateRspData, 
 	*models.ProblemDetails) {
 	var responseBody models.SecNegotiateRspData
-
-	return nil,nil
-	
+ 
+	return &responseBody, nil
 }
