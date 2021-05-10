@@ -1,6 +1,7 @@
 package service
 
 import (
+	// "crypto/tls"
 	"bufio"
 	"fmt"
 	"os"
@@ -12,19 +13,19 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"github.com/free5gc/http2_util"
+	"github.com/free5gc/logger_util"
+	"github.com/free5gc/path_util"
+	pathUtilLogger "github.com/free5gc/path_util/logger"
+	openApiLogger "github.com/yangalan0903/openapi/logger"
+	"github.com/yangalan0903/sepp/JOSEProtectedMessageForwarding"
+	"github.com/yangalan0903/sepp/TelescopicFqdnMapping"
 	"github.com/yangalan0903/sepp/consumer"
 	sepp_context "github.com/yangalan0903/sepp/context"
 	"github.com/yangalan0903/sepp/factory"
+	"github.com/yangalan0903/sepp/handshake"
 	"github.com/yangalan0903/sepp/logger"
 	"github.com/yangalan0903/sepp/util"
-	"github.com/free5gc/http2_util"
-	"github.com/free5gc/logger_util"
-	"github.com/yangalan0903/sepp/handshake"
-	"github.com/yangalan0903/sepp/JOSEProtectedMessageForwarding"
-	"github.com/yangalan0903/sepp/TelescopicFqdnMapping"
-	openApiLogger "github.com/yangalan0903/openapi/logger"
-	"github.com/free5gc/path_util"
-	pathUtilLogger "github.com/free5gc/path_util/logger"
 )
 
 type SEPP struct{}
@@ -84,7 +85,7 @@ func (sepp *SEPP) Initialize(c *cli.Context) error {
 	return nil
 }
 
-func ( *SEPP) setLogLevel() {
+func (*SEPP) setLogLevel() {
 	if factory.SeppConfig.Logger == nil {
 		initLog.Warnln("SEPP config without log level setting!!!")
 		return
@@ -163,6 +164,10 @@ func (sepp *SEPP) Start() {
 
 	sepp_context.Init()
 	self := sepp_context.GetSelf()
+
+	// var connectionState tls.ConnectionState
+	// connectionState.Version =
+
 	// Register to NRF
 	profile, err := consumer.BuildNFInstance(self)
 	if err != nil {
@@ -193,6 +198,16 @@ func (sepp *SEPP) Start() {
 
 	if err != nil {
 		initLog.Warnf("Initialize HTTP server: +%v", err)
+	}
+	for _, ipAddr := range self.FqdnIpMap {
+		consumer.SendExchangeCapability(ipAddr)
+		initLog.Infoln("finish exchange capability")
+		consumer.ExchangeCiphersuite(ipAddr)
+		initLog.Infoln("finish ciphersuit exchange: %s", self.N32fContextPool)
+		consumer.ExchangeProtectionPolicy(ipAddr)
+		initLog.Infoln("finish protection policy exchange: %s", self.N32fContextPool)
+		consumer.ExchangeIPXInfo(ipAddr)
+		initLog.Infoln("finish IPX Info exchange: %s", self.N32fContextPool)
 	}
 
 	serverScheme := factory.SeppConfig.Configuration.Sbi.Scheme

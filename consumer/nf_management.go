@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	sepp_context "github.com/yangalan0903/sepp/context"
-	"github.com/yangalan0903/sepp/logger"
 	"github.com/yangalan0903/openapi"
 	"github.com/yangalan0903/openapi/Nnrf_NFManagement"
 	"github.com/yangalan0903/openapi/models"
+	sepp_context "github.com/yangalan0903/sepp/context"
+	"github.com/yangalan0903/sepp/logger"
 )
 
 func BuildNFInstance(seppContext *sepp_context.SEPPContext) (profile models.NfProfile, err error) {

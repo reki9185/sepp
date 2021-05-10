@@ -12,17 +12,18 @@ import (
 )
 
 var (
-	log                 *logrus.Logger
-	AppLog              *logrus.Entry
-	InitLog             *logrus.Entry
-	CfgLog              *logrus.Entry
-	N32fTerminate       *logrus.Entry
-	ExchangeCapability  *logrus.Entry
-	EapAuthComfirmLog   *logrus.Entry
-	HandlerLog          *logrus.Entry
-	ContextLog          *logrus.Entry
-	ConsumerLog         *logrus.Entry
-	GinLog              *logrus.Entry
+	log                *logrus.Logger
+	AppLog             *logrus.Entry
+	InitLog            *logrus.Entry
+	CfgLog             *logrus.Entry
+	Handshake          *logrus.Entry
+	ExchangeCapability *logrus.Entry
+	N32fForward        *logrus.Entry
+	FQDNMappingLog     *logrus.Entry
+	HandlerLog         *logrus.Entry
+	ContextLog         *logrus.Entry
+	ConsumerLog        *logrus.Entry
+	GinLog             *logrus.Entry
 )
 
 func init() {
@@ -50,9 +51,10 @@ func init() {
 	AppLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "App"})
 	InitLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Init"})
 	CfgLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "CFG"})
-	// HandShakeLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "HandShakeLog"})
-	// JOSEProtectLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "JOSEProtectLog"})
-	// FQDNMapping = log.WithFields(logrus.Fields{"component": "SEPP", "category": "FQDNMapping"})
+	Handshake = log.WithFields(logrus.Fields{"component": "SEPP", "category": "HandShakeLog"})
+	ExchangeCapability = log.WithFields(logrus.Fields{"component": "SEPP", "category": "JOSEProtectLog"})
+	N32fForward = log.WithFields(logrus.Fields{"component": "SEPP", "category": "N32fForward"})
+	FQDNMappingLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "FQDNMapping"})
 	HandlerLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Handler"})
 	ContextLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "ctx"})
 	ConsumerLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Consumer"})

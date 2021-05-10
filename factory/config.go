@@ -31,11 +31,12 @@ const (
 )
 
 type Configuration struct {
-	Sbi             *Sbi            `yaml:"sbi,omitempty"`
-	fqdnSupportList []string        `yaml:"fqdnSupportList,omitempty"`
-	NrfUri          string          `yaml:"nrfUri,omitempty"`
-	PlmnSupportList []models.PlmnId `yaml:"plmnSupportList,omitempty"`
-	GroupId         string          `yaml:"groupId,omitempty"`
+	Fqdn            string               `yaml:"fqdn,omitempty"`
+	Sbi             *Sbi                 `yaml:"sbi,omitempty"`
+	FqdnSupportList []FqdnIpMap          `yaml:"fqdnSupportList,omitempty"`
+	NrfUri          string               `yaml:"nrfUri,omitempty"`
+	PlmnSupportList []models.PlmnId      `yaml:"plmnSupportList,omitempty"`
+	GroupId         string               `yaml:"groupId,omitempty"`
 }
 
 type Sbi struct {
@@ -48,6 +49,11 @@ type Sbi struct {
 type Security struct {
 	IntegrityOrder []string `yaml:"integrityOrder,omitempty"`
 	CipheringOrder []string `yaml:"cipheringOrder,omitempty"`
+}
+
+type FqdnIpMap struct {
+	Fqdn string
+	Ip string
 }
 
 func (c *Config) GetVersion() string {
