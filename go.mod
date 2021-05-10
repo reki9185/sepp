@@ -19,7 +19,6 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/ugorji/go v1.2.5 // indirect
 	github.com/urfave/cli v1.22.5
-	github.com/yangalan0903/http v0.0.0-00010101000000-000000000000
 	github.com/yangalan0903/openapi v0.0.0-20210414173423-ec2e658ec5f7
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 	golang.org/x/net v0.0.0-20210423184538-5f58ad60dda6 // indirect

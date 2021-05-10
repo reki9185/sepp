@@ -15,7 +15,6 @@ import (
 	"net/http"
 
 	"github.com/free5gc/http_wrapper"
-	"github.com/gin-gonic/gin"
 	"github.com/yangalan0903/openapi"
 	"github.com/yangalan0903/openapi/models"
 	"github.com/yangalan0903/sepp/logger"
