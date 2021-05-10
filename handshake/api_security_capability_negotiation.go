@@ -10,7 +10,9 @@
 package handshake
 
 import (
-	"net/http" //"net/http"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/free5gc/http_wrapper"
 	"github.com/gin-gonic/gin"
@@ -21,10 +23,10 @@ import (
 )
 
 // PostExchangeCapability - Security Capability Negotiation
-func PostExchangeCapability(ctx *gin.Context) {
+func PostExchangeCapability(rspWriter http.ResponseWriter, request *http.Request) {
 	var SecNegotiateReqData models.SecNegotiateReqData
 
-	requestBody, err := ctx.GetRawData()
+	requestBody, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		problemDetail := models.ProblemDetails{
 			Title:  "System failure",
@@ -33,24 +35,37 @@ func PostExchangeCapability(ctx *gin.Context) {
 			Cause:  "SYSTEM_FAILURE",
 		}
 		logger.Handshake.Errorf("Get Request Body error: %+v", err)
-		ctx.JSON(http.StatusInternalServerError, problemDetail)
+		rspWriter.WriteHeader(http.StatusInternalServerError)
+		rsp, err := json.Marshal(problemDetail)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusInternalServerError, problemDetail)
 		return
 	}
 
 	err = openapi.Deserialize(&SecNegotiateReqData, requestBody, "application/json")
 	if err != nil {
 		problemDetail := "[Request Body] " + err.Error()
-		rsp := models.ProblemDetails{
+		rspBody := models.ProblemDetails{
 			Title:  "Malformed request syntax",
 			Status: http.StatusBadRequest,
 			Detail: problemDetail,
 		}
 		logger.Handshake.Errorln(problemDetail)
-		ctx.JSON(http.StatusBadRequest, rsp)
+		rspWriter.WriteHeader(http.StatusBadRequest)
+		rsp, err := json.Marshal(rspBody)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusBadRequest, rsp)
 		return
 	}
 
-	req := http_wrapper.NewRequest(ctx.Request, SecNegotiateReqData)
+	req := http_wrapper.NewRequest(request, SecNegotiateReqData)
+
 	rsp := producer.HandleExchangeCapability(req)
 	responseBody, err := openapi.Serialize(rsp.Body, "application/json")
 	if err != nil {
@@ -60,8 +75,17 @@ func PostExchangeCapability(ctx *gin.Context) {
 			Cause:  "SYSTEM_FAILURE",
 			Detail: err.Error(),
 		}
-		ctx.JSON(http.StatusInternalServerError, problemDetails)
+		rspWriter.WriteHeader(http.StatusInternalServerError)
+		rsp, err := json.Marshal(problemDetails)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusInternalServerError, problemDetails)
 	} else {
-		ctx.Data(rsp.Status, "application/json", responseBody)
+		rspWriter.Header().Add("Content-Type", "application/json")
+		rspWriter.WriteHeader(rsp.Status)
+		rspWriter.Write(responseBody)
+		// ctx.Data(rsp.Status, "application/json", responseBody)
 	}
 }

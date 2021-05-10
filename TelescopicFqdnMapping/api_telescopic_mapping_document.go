@@ -9,13 +9,10 @@
 
 package TelescopicFqdnMapping
 
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-)
+import "net/http"
 
 // GetTelescopicMapping - Maps an FQDN to/from a telescopic FQDN
-func GetTelescopicMapping(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{})
+func GetTelescopicMapping(rspWriter http.ResponseWriter, request *http.Request) {
+	rspWriter.Write(nil)
+	// c.JSON(http.StatusOK, gin.H{})
 }

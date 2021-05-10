@@ -10,12 +10,10 @@
 package handshake
 
 import (
-	"net/http" //"net/http"
-
-	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 // PostN32fTerminate - N32-f Context Terminate
-func PostN32fTerminate(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{})
+func PostN32fTerminate(rspWriter http.ResponseWriter, request *http.Request) {
+	rspWriter.Write(nil)
 }

@@ -10,9 +10,9 @@
 package handshake
 
 import (
-	"net/http" //"net/http"
-
-	"github.com/gin-gonic/gin"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/free5gc/http_wrapper"
 	"github.com/yangalan0903/openapi"
@@ -22,12 +22,12 @@ import (
 )
 
 // PostExchangeParams - Parameter Exchange
-func PostExchangeParams(ctx *gin.Context) {
+func PostExchangeParams(rspWriter http.ResponseWriter, request *http.Request) {
 
-	key, _ := ctx.Request.TLS.ExportKeyingMaterial("EXPORTER_3GPP_N32_MASTER", nil, 64)
+	key, _ := request.TLS.ExportKeyingMaterial("EXPORTER_3GPP_N32_MASTER", nil, 64)
 	var secParamExchReqData models.SecParamExchReqData
 
-	requestBody, err := ctx.GetRawData()
+	requestBody, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		problemDetail := models.ProblemDetails{
 			Title:  "System failure",
@@ -36,24 +36,36 @@ func PostExchangeParams(ctx *gin.Context) {
 			Cause:  "SYSTEM_FAILURE",
 		}
 		logger.Handshake.Errorf("Get Request Body error: %+v", err)
-		ctx.JSON(http.StatusInternalServerError, problemDetail)
+		rspWriter.WriteHeader(http.StatusInternalServerError)
+		rsp, err := json.Marshal(problemDetail)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusInternalServerError, problemDetail)
 		return
 	}
 
 	err = openapi.Deserialize(&secParamExchReqData, requestBody, "application/json")
 	if err != nil {
 		problemDetail := "[Request Body] " + err.Error()
-		rsp := models.ProblemDetails{
+		rspBody := models.ProblemDetails{
 			Title:  "Malformed request syntax",
 			Status: http.StatusBadRequest,
 			Detail: problemDetail,
 		}
 		logger.Handshake.Errorln(problemDetail)
-		ctx.JSON(http.StatusBadRequest, rsp)
+		rspWriter.WriteHeader(http.StatusBadRequest)
+		rsp, err := json.Marshal(rspBody)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusBadRequest, rsp)
 		return
 	}
 
-	req := http_wrapper.NewRequest(ctx.Request, secParamExchReqData)
+	req := http_wrapper.NewRequest(request, secParamExchReqData)
 
 	rsp := producer.HandleExchangeParams(req, key)
 
@@ -65,8 +77,17 @@ func PostExchangeParams(ctx *gin.Context) {
 			Cause:  "SYSTEM_FAILURE",
 			Detail: err.Error(),
 		}
-		ctx.JSON(http.StatusInternalServerError, problemDetails)
+		rspWriter.WriteHeader(http.StatusInternalServerError)
+		rsp, err := json.Marshal(problemDetails)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusInternalServerError, problemDetails)
 	} else {
-		ctx.Data(rsp.Status, "application/json", responseBody)
+		rspWriter.Header().Add("Content-Type", "application/json")
+		rspWriter.WriteHeader(rsp.Status)
+		rspWriter.Write(responseBody)
+		// ctx.Data(rsp.Status, "application/json", responseBody)
 	}
 }
