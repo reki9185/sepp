@@ -1,7 +1,6 @@
 package service
 
 import (
-	// "crypto/tls"
 	"bufio"
 	"fmt"
 	"os"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/free5gc/http2_util"
 	"github.com/yangalan0903/sepp/logger_util"
+	"github.com/yangalan0903/sepp/util"
 
 	// "github.com/free5gc/logger_util"
 	"github.com/free5gc/path_util"
@@ -27,7 +27,6 @@ import (
 	"github.com/yangalan0903/sepp/factory"
 	"github.com/yangalan0903/sepp/handshake"
 	"github.com/yangalan0903/sepp/logger"
-	"github.com/yangalan0903/sepp/util"
 )
 
 type SEPP struct{}
@@ -163,6 +162,7 @@ func (sepp *SEPP) Start() {
 	handshake.AddService(router)
 	JOSEProtectedMessageForwarding.AddService(router)
 	TelescopicFqdnMapping.AddService(router)
+	router.HandleFunc("/", HandleMessageForwarding)
 
 	sepp_context.Init()
 	self := sepp_context.GetSelf()

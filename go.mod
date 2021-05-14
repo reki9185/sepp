@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
+	github.com/buger/jsonparser v1.1.1
 	github.com/free5gc/http2_util v1.0.0
 	github.com/free5gc/http_wrapper v1.0.0
 	github.com/free5gc/logger_conf v1.0.0
@@ -11,6 +12,7 @@ require (
 	github.com/free5gc/path_util v1.0.0
 	github.com/free5gc/version v1.0.0
 	github.com/gin-gonic/gin v1.7.1
+	github.com/go-openapi/jsonpointer v0.19.5
 	github.com/go-playground/validator/v10 v10.5.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.2.0
@@ -29,5 +31,5 @@ require (
 )
 
 replace github.com/yangalan0903/openapi => /home/alan/files/thesis/openapi
-
+replace github.com/yangalan0903/sepp/jsonhandler => /home/alan/files/thesis/free5gc/NFs/sepp/jsonhandler
 // replace github.com/yangalan0903/sepp/factory => ./factory

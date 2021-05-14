@@ -58,30 +58,6 @@ func (hook *FileHook) Levels() []logrus.Level {
 	}
 }
 
-//The Middleware will write the Gin logs to logrus.
-// func MuxToLogrus(log *logrus.Entry, next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		path := r.URL.Path    // path := c.Request.URL.Path
-// 		raw := r.URL.RawQuery // raw := c.Request.URL.RawQuery
-
-// 		// Process request
-
-// 		clientIP := r.RemoteAddr                  //clientIP := c.ClientIP()
-// 		method := r.Method                        //method := c.Request.Method
-// 		statusCode := r.Response.StatusCode       //statusCode := c.Writer.Status()
-// 		errorMessage := r.Context().Err().Error() //errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
-
-// 		if raw != "" {
-// 			path = path + "?" + raw
-// 		}
-
-// 		log.Infof("| %3d | %15s | %-7s | %s | %s",
-// 			statusCode, clientIP, method, path, errorMessage)
-
-// 		next.ServeHTTP(w, r) // c.Next()
-// 	})
-// }
-
 //NewGinWithLogrus - returns an Engine instance with the ginToLogrus and Recovery middleware already attached.
 func NewMuxWithLogrus(log *logrus.Entry) *mux.Router {
 	engine := mux.NewRouter()
@@ -95,7 +71,6 @@ func NewMuxWithLogrus(log *logrus.Entry) *mux.Router {
 
 			clientIP := r.RemoteAddr //clientIP := c.ClientIP()
 			method := r.Method       //method := c.Request.Method
-			fmt.Println(r.Response)
 			// statusCode := r.Response.StatusCode
 			// errorMessage := r.Response. //errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
 
