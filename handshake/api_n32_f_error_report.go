@@ -10,12 +10,10 @@
 package handshake
 
 import (
-	"net/http" //"net/http"
-
-	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 // PostN32fError - N32-f Error Reporting Procedure
-func PostN32fError(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{})
+func PostN32fError(rspWriter http.ResponseWriter, request *http.Request) {
+	rspWriter.Write(nil)
 }

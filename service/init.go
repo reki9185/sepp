@@ -14,7 +14,9 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/free5gc/http2_util"
-	"github.com/free5gc/logger_util"
+	"github.com/yangalan0903/sepp/logger_util"
+
+	// "github.com/free5gc/logger_util"
 	"github.com/free5gc/path_util"
 	pathUtilLogger "github.com/free5gc/path_util/logger"
 	openApiLogger "github.com/yangalan0903/openapi/logger"
@@ -70,7 +72,7 @@ func (sepp *SEPP) Initialize(c *cli.Context) error {
 			return err
 		}
 	} else {
-		DefaultSeppConfigPath := path_util.Free5gcPath("free5gc/config/seppcfg.yaml")
+		DefaultSeppConfigPath := path_util.Free5gcPath("free5gc2/config/seppcfg.yaml")
 		if err := factory.InitConfigFactory(DefaultSeppConfigPath); err != nil {
 			return err
 		}
@@ -157,16 +159,13 @@ func (sepp *SEPP) FilterCli(c *cli.Context) (args []string) {
 func (sepp *SEPP) Start() {
 	initLog.Infoln("Server started")
 
-	router := logger_util.NewGinWithLogrus(logger.GinLog)
+	router := logger_util.NewMuxWithLogrus(logger.GinLog)
 	handshake.AddService(router)
 	JOSEProtectedMessageForwarding.AddService(router)
 	TelescopicFqdnMapping.AddService(router)
 
 	sepp_context.Init()
 	self := sepp_context.GetSelf()
-
-	// var connectionState tls.ConnectionState
-	// connectionState.Version =
 
 	// Register to NRF
 	profile, err := consumer.BuildNFInstance(self)

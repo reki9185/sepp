@@ -10,10 +10,11 @@
 package JOSEProtectedMessageForwarding
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/free5gc/http_wrapper"
-	"github.com/gin-gonic/gin"
 	"github.com/yangalan0903/openapi"
 	"github.com/yangalan0903/openapi/models"
 	"github.com/yangalan0903/sepp/logger"
@@ -21,15 +22,15 @@ import (
 )
 
 // N32fProcessOptions - Discover communication options supported by next hop (IPX or SEPP)
-func N32fProcessOptions(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{})
+func N32fProcessOptions(rspWriter http.ResponseWriter, request *http.Request) {
+	rspWriter.Write(nil) // ctx.JSON(http.StatusOK, gin.H{})
 }
 
 // PostN32fProcess - N32-f Message Forwarding
-func PostN32fProcess(ctx *gin.Context) {
+func PostN32fProcess(rspWriter http.ResponseWriter, request *http.Request) {
 	var n32fReformattedReqMsg models.N32fReformattedReqMsg
 
-	requestBody, err := ctx.GetRawData()
+	requestBody, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		problemDetail := models.ProblemDetails{
 			Title:  "System failure",
@@ -38,24 +39,36 @@ func PostN32fProcess(ctx *gin.Context) {
 			Cause:  "SYSTEM_FAILURE",
 		}
 		logger.N32fForward.Errorf("Get Request Body error: %+v", err)
-		ctx.JSON(http.StatusInternalServerError, problemDetail)
+		rspWriter.WriteHeader(http.StatusInternalServerError)
+		rsp, err := json.Marshal(problemDetail)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusInternalServerError, problemDetail)
 		return
 	}
 
 	err = openapi.Deserialize(&n32fReformattedReqMsg, requestBody, "application/json")
 	if err != nil {
 		problemDetail := "[Request Body] " + err.Error()
-		rsp := models.ProblemDetails{
+		rspBody := models.ProblemDetails{
 			Title:  "Malformed request syntax",
 			Status: http.StatusBadRequest,
 			Detail: problemDetail,
 		}
 		logger.Handshake.Errorln(problemDetail)
-		ctx.JSON(http.StatusBadRequest, rsp)
+		rspWriter.WriteHeader(http.StatusBadRequest)
+		rsp, err := json.Marshal(rspBody)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusBadRequest, rsp)
 		return
 	}
 
-	req := http_wrapper.NewRequest(ctx.Request, n32fReformattedReqMsg)
+	req := http_wrapper.NewRequest(request, n32fReformattedReqMsg)
 
 	rsp := producer.HandleN32forwardMessage(req)
 
@@ -67,8 +80,16 @@ func PostN32fProcess(ctx *gin.Context) {
 			Cause:  "SYSTEM_FAILURE",
 			Detail: err.Error(),
 		}
-		ctx.JSON(http.StatusInternalServerError, problemDetails)
+		rspWriter.WriteHeader(http.StatusInternalServerError)
+		rsp, err := json.Marshal(problemDetails)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusInternalServerError, problemDetails)
 	} else {
-		ctx.Data(rsp.Status, "application/json", responseBody)
+		rspWriter.Header().Add("Content-Type", "application/json")
+		rspWriter.Write(responseBody)
+		// ctx.Data(rsp.Status, "application/json", responseBody)
 	}
 }
