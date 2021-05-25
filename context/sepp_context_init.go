@@ -88,13 +88,51 @@ func InitSeppContext(context *SEPPContext) {
 func BuildProtectionPolice(context *SEPPContext) {
 	var apiIeMapping models.ApiIeMapping
 	var apiSignature models.ApiSignature
-	apiSignature.Uri = "{apiRoot}/nnrf-disc/v1/nf-instances"
+	apiSignature.Uri = "/nnrf-disc/v1/nf-instances"
 	apiIeMapping.ApiSignature = apiSignature
 	apiIeMapping.ApiMethod = models.HttpMethod_GET
 	var ieInfo models.IeInfo
 	ieInfo.IeLoc = models.IeLocation_URI_PARAM
 	ieInfo.IeType = models.IeType_UEID
 	ieInfo.ReqIe = "Supi"
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	context.ProtectionPolicy.ApiIeMappingList = append(context.ProtectionPolicy.ApiIeMappingList, apiIeMapping)
+	context.ProtectionPolicy.DataTypeEncPolicy = append(context.ProtectionPolicy.DataTypeEncPolicy, models.IeType_UEID)
+
+	apiIeMapping = models.ApiIeMapping{}
+	apiSignature = models.ApiSignature{}
+	apiSignature.Uri = "/nausf-auth/v1/ue-authentications"
+	apiIeMapping.ApiSignature = apiSignature
+	apiIeMapping.ApiMethod = models.HttpMethod_POST
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_UEID,
+		ReqIe:  "/supiOrSuci",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_AUTHENTICATION_MATERIAL,
+		RspIe:  "/5gAuthData",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_AUTHENTICATION_MATERIAL,
+		RspIe:  "/5gAuthData/rand",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_AUTHENTICATION_MATERIAL,
+		RspIe:  "/5gAuthData/hxresStar",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_AUTHENTICATION_MATERIAL,
+		RspIe:  "/5gAuthData/autn",
+	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
 	context.ProtectionPolicy.ApiIeMappingList = append(context.ProtectionPolicy.ApiIeMappingList, apiIeMapping)
 	context.ProtectionPolicy.DataTypeEncPolicy = append(context.ProtectionPolicy.DataTypeEncPolicy, models.IeType_UEID)

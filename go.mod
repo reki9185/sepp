@@ -5,6 +5,9 @@ go 1.14
 require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/buger/jsonparser v1.1.1
+	github.com/calee0219/fatal v0.0.1
+	github.com/free5gc/CommonConsumerTestData v1.0.0
+	github.com/free5gc/MongoDBLibrary v1.0.0
 	github.com/free5gc/http2_util v1.0.0
 	github.com/free5gc/http_wrapper v1.0.0
 	github.com/free5gc/logger_conf v1.0.0
@@ -22,8 +25,9 @@ require (
 	github.com/ugorji/go v1.2.5 // indirect
 	github.com/urfave/cli v1.22.5
 	github.com/yangalan0903/openapi v0.0.0-20210414173423-ec2e658ec5f7
+	go.mongodb.org/mongo-driver v1.5.2
 	golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
-	golang.org/x/net v0.0.0-20210423184538-5f58ad60dda6 // indirect
+	golang.org/x/net v0.0.0-20210423184538-5f58ad60dda6
 	golang.org/x/sys v0.0.0-20210426080607-c94f62235c83 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1
@@ -31,5 +35,7 @@ require (
 )
 
 replace github.com/yangalan0903/openapi => /home/alan/files/thesis/openapi
+
 replace github.com/yangalan0903/sepp/jsonhandler => /home/alan/files/thesis/free5gc/NFs/sepp/jsonhandler
+
 // replace github.com/yangalan0903/sepp/factory => ./factory

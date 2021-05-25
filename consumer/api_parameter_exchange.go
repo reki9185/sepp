@@ -41,6 +41,7 @@ func ExchangeCiphersuite(seppUri string) {
 		if status == http.StatusOK {
 			secInfo := self.PLMNSecInfo[rsp.Sender]
 			secInfo.N32fContexId = rsp.N32fContextId
+			self.PLMNSecInfo[rsp.Sender] = secInfo
 			var n32fContext sepp_context.N32fContext
 			var peerInfo sepp_context.N32fPeerInformation
 			peerInfo.RemotePlmnId = rsp.Sender
@@ -119,9 +120,9 @@ func ExchangeProtectionPolicy(seppUri string) {
 		}
 		status := res.StatusCode
 		if status == http.StatusOK {
-			n32fContext := self.N32fContextPool[rsp.Sender]
+			n32fContext := self.N32fContextPool[rsp.N32fContextId]
 			n32fContext.SecContext.ProtectionPolicy = *rsp.SelProtectionPolicyInfo
-			self.N32fContextPool[rsp.Sender] = n32fContext
+			self.N32fContextPool[rsp.N32fContextId] = n32fContext
 			break
 		} else {
 			fmt.Println(fmt.Errorf("handler returned wrong status code %d", status))

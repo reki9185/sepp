@@ -3,13 +3,14 @@ package jsonhandler
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/yangalan0903/openapi/models"
 )
 
-func BuildJsonBody(values []models.HttpPayload) []byte {
+func BuildJsonBody(values []models.HttpPayload, dataToIntegrityProtectAndCipherBlock models.DataToIntegrityProtectAndCipherBlock) []byte {
 	obj := make(map[string]interface{})
 	for _, value := range values {
 		pathSegments := strings.Split(value.IePath, "/")
@@ -25,8 +26,18 @@ func BuildJsonBody(values []models.HttpPayload) []byte {
 					if err != nil {
 						fmt.Println(err)
 					}
-					if _, exist := value.Value["encBlockIndex"]; exist {
-						arrayTravaler[arrayIdx] = value.Value
+					if encBlockIndex, exist := value.Value["encBlockIndex"]; exist {
+						encryptedData := dataToIntegrityProtectAndCipherBlock.DataToEncrypt[encBlockIndex.(int)]
+						if data, exist := encryptedData["string"]; exist {
+							arrayTravaler[arrayIdx] = data.(string)
+						}
+						if data, exist := encryptedData["int"]; exist {
+							arrayTravaler[arrayIdx] = data.(int)
+						}
+						if data, exist := encryptedData["bool"]; exist {
+							arrayTravaler[arrayIdx] = data.(bool)
+						}
+						// arrayTravaler[arrayIdx] = value.Value["encBlockIndex"]
 					} else {
 						for _, val := range value.Value {
 							arrayTravaler[arrayIdx] = val
@@ -34,8 +45,25 @@ func BuildJsonBody(values []models.HttpPayload) []byte {
 					}
 					break
 				}
-				if _, exist := value.Value["encBlockIndex"]; exist {
-					travaler[segment] = value.Value
+				if encBlockIndex, exist := value.Value["encBlockIndex"]; exist {
+					var temp int
+					switch t := reflect.ValueOf(encBlockIndex); t.Kind() {
+					case reflect.Int:
+						temp = int(t.Int())
+					case reflect.Float64:
+						temp = int(t.Float())
+					}
+					encryptedData := dataToIntegrityProtectAndCipherBlock.DataToEncrypt[temp]
+					if data, exist := encryptedData["string"]; exist {
+						travaler[segment] = data.(string)
+					}
+					if data, exist := encryptedData["int"]; exist {
+						travaler[segment] = data.(int)
+					}
+					if data, exist := encryptedData["bool"]; exist {
+						travaler[segment] = data.(bool)
+					}
+					// travaler[segment] = value.Value["encBlockIndex"]
 				} else {
 					for _, val := range value.Value {
 						travaler[segment] = val

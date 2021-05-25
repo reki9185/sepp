@@ -25,7 +25,6 @@ func ParseJsonBody(jsondata []byte) []models.HttpPayload {
 				iterateKey = append(iterateKey, "["+fmt.Sprint(lenOfArray)+"]")
 				tempValue, tempDataType, _, err := jsonparser.Get(jsondata, iterateKey...)
 				if err != nil {
-					fmt.Println(err, iterateKey)
 					iterateKey = iterateKey[:len(iterateKey)-1]
 					break
 				}

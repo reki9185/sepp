@@ -40,7 +40,6 @@ func SendExchangeCapability(seppUri string) {
 			secInfo.SecCap = rsp.SelectedSecCapability
 			secInfo.Var3GppSbiTargetApiRootSupported = rsp.Var3GppSbiTargetApiRootSupported
 			self.PLMNSecInfo[rsp.Sender] = secInfo
-			fmt.Println(fmt.Errorf("security capability exchange finished"))
 			break
 		} else {
 			fmt.Println(fmt.Errorf("handler returned wrong status code %d", status))

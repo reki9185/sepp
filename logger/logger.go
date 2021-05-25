@@ -18,6 +18,7 @@ var (
 	CfgLog             *logrus.Entry
 	Handshake          *logrus.Entry
 	ExchangeCapability *logrus.Entry
+	Messageforward     *logrus.Entry
 	N32fForward        *logrus.Entry
 	FQDNMappingLog     *logrus.Entry
 	HandlerLog         *logrus.Entry
@@ -52,7 +53,8 @@ func init() {
 	InitLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Init"})
 	CfgLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "CFG"})
 	Handshake = log.WithFields(logrus.Fields{"component": "SEPP", "category": "HandShakeLog"})
-	ExchangeCapability = log.WithFields(logrus.Fields{"component": "SEPP", "category": "JOSEProtectLog"})
+	ExchangeCapability = log.WithFields(logrus.Fields{"component": "SEPP", "category": "HandShakeLog"})
+	Messageforward = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Messageforward"})
 	N32fForward = log.WithFields(logrus.Fields{"component": "SEPP", "category": "N32fForward"})
 	FQDNMappingLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "FQDNMapping"})
 	HandlerLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Handler"})
