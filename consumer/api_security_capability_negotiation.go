@@ -24,11 +24,12 @@ func SendExchangeCapability(seppUri string) {
 
 	var res *http.Response
 	for {
+
 		rsp, resTmp, err := client.SecurityCapabilityNegotiationApi.PostExchangeCapability(context.TODO(), secNegotiateReqData)
 		if err != nil || resTmp == nil {
 			//TODO : add log
 			fmt.Println(fmt.Errorf("SEPP connect to remote sepp Error[%v]", err))
-			time.Sleep(2 * time.Second)
+			time.Sleep(10 * time.Second)
 			continue
 		} else {
 			res = resTmp
