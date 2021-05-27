@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -384,27 +385,25 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 		if data, err := rspRawJSONWebEncryption.Iv.MarshalJSON(); err == nil {
 			if err := json.Unmarshal(data, &rspFlatJweJson.Iv); err != nil {
 				logger.N32fForward.Errorln("json unmarshal error", err)
+				fmt.Println(err)
+			}
+			if data, err := rspRawJSONWebEncryption.Tag.MarshalJSON(); err == nil {
+				if err := json.Unmarshal(data, &rspFlatJweJson.Tag); err != nil {
+					logger.N32fForward.Errorln("json unmarshal error", err)
+				}
+			}
+		}
+		if rspRawJSONWebEncryption.Header != nil {
+			for headerKey, rawMessage := range *rspRawJSONWebEncryption.Header {
+				rspFlatJweJson.Header[string(headerKey)] = rawMessage
+			}
+		}
+		if rspRawJSONWebEncryption.Unprotected != nil {
+			for headerKey, rawMessage := range *rspRawJSONWebEncryption.Unprotected {
+				rspFlatJweJson.Unprotected[string(headerKey)] = rawMessage
 			}
 		}
 	}
-	if rspRawJSONWebEncryption.Tag != nil {
-		if data, err := rspRawJSONWebEncryption.Tag.MarshalJSON(); err == nil {
-			if err := json.Unmarshal(data, &rspFlatJweJson.Tag); err != nil {
-				logger.N32fForward.Errorln("json unmarshal error", err)
-			}
-		}
-	}
-	if rspRawJSONWebEncryption.Header != nil {
-		for headerKey, rawMessage := range *rspRawJSONWebEncryption.Header {
-			rspFlatJweJson.Header[string(headerKey)] = rawMessage
-		}
-	}
-	if rspRawJSONWebEncryption.Unprotected != nil {
-		for headerKey, rawMessage := range *rspRawJSONWebEncryption.Unprotected {
-			rspFlatJweJson.Unprotected[string(headerKey)] = rawMessage
-		}
-	}
-
 	responseBody.ReformattedData = &rspFlatJweJson
 
 	return &responseBody, nil

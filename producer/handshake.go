@@ -88,11 +88,12 @@ func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData)
 	supportedSecCapabilityList := secNegotiateReqData.SupportedSecCapabilityList
 	var securityCapability models.SecurityCapability
 	for _, secCap := range supportedSecCapabilityList {
-		if secCap == "PRINS" {
+		if secCap == models.SecurityCapability_PRINS {
 			securityCapability = secCap
 			break
-		} else if secCap == "TLS" {
+		} else if secCap == models.SecurityCapability_TLS {
 			securityCapability = secCap
+			// break
 		}
 	}
 	if securityCapability == "" {
@@ -148,16 +149,21 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		// TODO return error
 		return nil, &problemDetails
 	}
+
 	if _, ok := self.N32fContextPool[n32fContextId]; !ok { //for Cipher Suite Negotiation
+		secinfo := self.PLMNSecInfo[fqdn]
+		secinfo.N32fContexId = n32fContextId
+		self.PLMNSecInfo[fqdn] = secinfo
 		var n32fContext sepp_context.N32fContext
 		var cipherSuites sepp_context.CipherSuite
 		jweCipherSuiteList := secParamExchReqData.JweCipherSuiteList
 		for _, ciphersuite := range jweCipherSuiteList {
 			if ciphersuite == "A128GCM" {
 				cipherSuites.JweCipherSuite = ciphersuite
-				break
+				// break
 			} else if ciphersuite == "A256GCM" {
 				cipherSuites.JweCipherSuite = ciphersuite
+				break
 			}
 		}
 		jwsCipherSuiteList := secParamExchReqData.JwsCipherSuiteList
@@ -192,17 +198,24 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		return &responseBody, nil
 
 	} else if secParamExchReqData.ProtectionPolicyInfo != nil {
+		keyLen := 0
+		switch self.N32fContextPool[n32fContextId].SecContext.CipherSuitList.JweCipherSuite {
+		case "A128GCM":
+			keyLen = 16
+		case "A256GCM":
+			keyLen = 32
+		}
 		hash := sha256.New
 		info := []byte("N32" + secParamExchReqData.N32fContextId + "parallel_request_key")
 		expandHkdf := hkdf.Expand(hash, masterKey, info)
-		recvReqKey := make([]byte, 16)
+		recvReqKey := make([]byte, keyLen)
 		if _, err := io.ReadFull(expandHkdf, recvReqKey); err != nil {
 			panic(err)
 		}
 		hash = sha256.New
 		info = []byte("N32" + secParamExchReqData.N32fContextId + "parallel_response_key")
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
-		recvRspKey := make([]byte, 16)
+		recvRspKey := make([]byte, keyLen)
 		if _, err := io.ReadFull(expandHkdf, recvRspKey); err != nil {
 			panic(err)
 		}
@@ -210,7 +223,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_request_key")
 
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
-		sendReqKey := make([]byte, 16)
+		sendReqKey := make([]byte, keyLen)
 		if _, err := io.ReadFull(expandHkdf, sendReqKey); err != nil {
 			panic(err)
 		}
@@ -218,7 +231,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_response_key")
 
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
-		sendRspKey := make([]byte, 16)
+		sendRspKey := make([]byte, keyLen)
 		if _, err := io.ReadFull(expandHkdf, sendRspKey); err != nil {
 			panic(err)
 		}

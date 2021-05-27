@@ -20,7 +20,6 @@ import (
 	"github.com/free5gc/path_util"
 	pathUtilLogger "github.com/free5gc/path_util/logger"
 	openApiLogger "github.com/yangalan0903/openapi/logger"
-	"github.com/yangalan0903/openapi/models"
 	"github.com/yangalan0903/sepp/JOSEProtectedMessageForwarding"
 	"github.com/yangalan0903/sepp/TelescopicFqdnMapping"
 	"github.com/yangalan0903/sepp/consumer"
@@ -199,21 +198,16 @@ func (sepp *SEPP) Start() {
 	if err != nil {
 		initLog.Warnf("Initialize HTTP server: +%v", err)
 	}
-	go func() {
-		for key, ipAddr := range self.FqdnIpMap {
-			consumer.SendExchangeCapability(ipAddr)
-			initLog.Infoln("finish exchange capability")
-			if self.PLMNSecInfo[key].SecCap == models.SecurityCapability_TLS {
-				break
-			}
-			consumer.ExchangeCiphersuite(ipAddr)
-			initLog.Infoln("finish ciphersuit exchange")
-			consumer.ExchangeProtectionPolicy(ipAddr)
-			initLog.Infoln("finish protection policy exchange")
-			consumer.ExchangeIPXInfo(ipAddr)
-			initLog.Infoln("finish IPX Info exchange")
-		}
-	}()
+	// for _, ipAddr := range self.FqdnIpMap {
+	// 	consumer.SendExchangeCapability(ipAddr)
+	// 	initLog.Infoln("finish exchange capability")
+	// 	consumer.ExchangeCiphersuite(ipAddr)
+	// 	initLog.Infoln("finish ciphersuit exchange: %s", self.N32fContextPool)
+	// 	consumer.ExchangeProtectionPolicy(ipAddr)
+	// 	initLog.Infoln("finish protection policy exchange: %s", self.N32fContextPool)
+	// 	consumer.ExchangeIPXInfo(ipAddr)
+	// 	initLog.Infoln("finish IPX Info exchange: %s", self.N32fContextPool)
+	// }
 
 	serverScheme := factory.SeppConfig.Configuration.Sbi.Scheme
 	if serverScheme == "http" {

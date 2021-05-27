@@ -11,6 +11,9 @@ import (
 )
 
 func BuildJsonBody(values []models.HttpPayload, dataToIntegrityProtectAndCipherBlock models.DataToIntegrityProtectAndCipherBlock) []byte {
+	if values == nil {
+		return nil
+	}
 	obj := make(map[string]interface{})
 	for _, value := range values {
 		pathSegments := strings.Split(value.IePath, "/")

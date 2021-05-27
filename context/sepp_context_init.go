@@ -39,10 +39,10 @@ func InitSeppContext(context *SEPPContext) {
 		context.PLMNSecInfo[fqdn] = secInfo
 	}
 	sbi := configuration.Sbi
-	context.SelfIPXSecInfo.IpxProviderId = "IPX1"
-	context.SelfIPXSecInfo.CertificateList = append(context.SelfIPXSecInfo.CertificateList, "Certificate1")
-	// context.SelfIPXSecInfo.IpxProviderId = "IPX2"
-	// context.SelfIPXSecInfo.CertificateList = append(context.SelfIPXSecInfo.CertificateList, "Certificate2")
+	// context.SelfIPXSecInfo.IpxProviderId = "IPX1"
+	// context.SelfIPXSecInfo.CertificateList = append(context.SelfIPXSecInfo.CertificateList, "Certificate1")
+	context.SelfIPXSecInfo.IpxProviderId = "IPX2"
+	context.SelfIPXSecInfo.CertificateList = append(context.SelfIPXSecInfo.CertificateList, "Certificate2")
 	context.N32fContextPool = make(map[N32fContextId]N32fContext)
 	context.JweCipherSuiteList = append(context.JweCipherSuiteList, "A128GCM", "A256GCM")
 	context.JwsCipherSuiteList = append(context.JwsCipherSuiteList, "ES256")

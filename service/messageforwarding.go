@@ -318,6 +318,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				clearText = buf
 			}
 
+			logger.Messageforward.Infoln("start send")
 			rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, remoteSeppAddr, jweKey)
 
 			flatJweJson := rsp.ReformattedData

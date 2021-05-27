@@ -62,7 +62,6 @@ func PostExchangeCapability(rspWriter http.ResponseWriter, request *http.Request
 		// ctx.JSON(http.StatusBadRequest, rsp)
 		return
 	}
-
 	req := http_wrapper.NewRequest(request, SecNegotiateReqData)
 
 	rsp := producer.HandleExchangeCapability(req)
