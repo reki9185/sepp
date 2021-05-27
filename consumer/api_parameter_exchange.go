@@ -50,12 +50,19 @@ func ExchangeCiphersuite(seppUri string) {
 			var secContext sepp_context.N32fSecContext
 			secContext.CipherSuitList.JweCipherSuite = rsp.SelectedJweCipherSuite
 			secContext.CipherSuitList.JwsCipherSuite = rsp.SelectedJwsCipherSuite
+			keyLen := 0
+			switch rsp.SelectedJweCipherSuite {
+			case "A128GCM":
+				keyLen = 16
+			case "A256GCM":
+				keyLen = 32
+			}
 			conText := []byte("")
 			masterKey, _ := res.TLS.ExportKeyingMaterial("EXPORTER_3GPP_N32_MASTER", conText, 64)
 			hash := sha256.New
 			info := []byte("N32" + rsp.N32fContextId + "parallel_request_key")
 			expandHkdf := hkdf.Expand(hash, masterKey, info)
-			sendReqKey := make([]byte, 16)
+			sendReqKey := make([]byte, keyLen)
 			if _, err := io.ReadFull(expandHkdf, sendReqKey); err != nil {
 				panic(err)
 			}
@@ -63,7 +70,7 @@ func ExchangeCiphersuite(seppUri string) {
 			hash = sha256.New
 			info = []byte("N32" + rsp.N32fContextId + "parallel_response_key")
 			expandHkdf = hkdf.Expand(hash, masterKey, info)
-			sendRspKey := make([]byte, 16)
+			sendRspKey := make([]byte, keyLen)
 			if _, err := io.ReadFull(expandHkdf, sendRspKey); err != nil {
 				panic(err)
 			}
@@ -72,7 +79,7 @@ func ExchangeCiphersuite(seppUri string) {
 			info = []byte("N32" + rsp.N32fContextId + "reverse_request_key")
 
 			expandHkdf = hkdf.Expand(hash, masterKey, info)
-			recvReqKey := make([]byte, 16)
+			recvReqKey := make([]byte, keyLen)
 			if _, err := io.ReadFull(expandHkdf, recvReqKey); err != nil {
 				panic(err)
 			}
@@ -81,7 +88,7 @@ func ExchangeCiphersuite(seppUri string) {
 			info = []byte("N32" + rsp.N32fContextId + "reverse_response_key")
 
 			expandHkdf = hkdf.Expand(hash, masterKey, info)
-			recvResKey := make([]byte, 16)
+			recvResKey := make([]byte, keyLen)
 			if _, err := io.ReadFull(expandHkdf, recvResKey); err != nil {
 				panic(err)
 			}

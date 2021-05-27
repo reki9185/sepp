@@ -10,19 +10,33 @@ import (
 
 	"github.com/yangalan0903/openapi/JOSEProtectedMessageForwarding"
 	"github.com/yangalan0903/openapi/models"
+	sepp_context "github.com/yangalan0903/sepp/context"
 	"gopkg.in/square/go-jose.v2"
 )
 
-func ForwardMessage(plainText, aad []byte, seppUri string, key []byte) (models.N32fReformattedRspMsg, error) {
+func ForwardMessage(n32fContextId string, plainText, aad []byte, seppUri string, key []byte) (models.N32fReformattedRspMsg, error) {
 	configuration := JOSEProtectedMessageForwarding.NewConfiguration()
 	configuration.SetBasePath(seppUri)
 	client := JOSEProtectedMessageForwarding.NewAPIClient(configuration)
 
 	var n32fReformattedReqMsg models.N32fReformattedReqMsg
 
-	encrypter, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: key}, nil)
-	if err != nil {
-		panic(err)
+	self := sepp_context.GetSelf()
+	var encrypter jose.Encrypter
+	enc := self.N32fContextPool[n32fContextId].SecContext.CipherSuitList.JweCipherSuite
+	switch enc {
+	case "A128GCM":
+		if temp, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: key}, nil); err != nil {
+			panic(err)
+		} else {
+			encrypter = temp
+		}
+	case "A256GCM":
+		if temp, err := jose.NewEncrypter(jose.A256GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: key}, nil); err != nil {
+			panic(err)
+		} else {
+			encrypter = temp
+		}
 	}
 
 	object, err := encrypter.EncryptWithAuthData(plainText, aad)

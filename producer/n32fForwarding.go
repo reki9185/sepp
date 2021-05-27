@@ -327,9 +327,21 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 		clearText = buf
 	}
 
-	encrypter, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: jweKey}, nil)
-	if err != nil {
-		panic(err)
+	var encrypter jose.Encrypter
+	enc := self.N32fContextPool[n32fContextId].SecContext.CipherSuitList.JweCipherSuite
+	switch enc {
+	case "A128GCM":
+		if temp, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: jweKey}, nil); err != nil {
+			panic(err)
+		} else {
+			encrypter = temp
+		}
+	case "A256GCM":
+		if temp, err := jose.NewEncrypter(jose.A256GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: jweKey}, nil); err != nil {
+			panic(err)
+		} else {
+			encrypter = temp
+		}
 	}
 
 	object, err := encrypter.EncryptWithAuthData(clearText, aad)
