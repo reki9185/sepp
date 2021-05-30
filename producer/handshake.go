@@ -8,7 +8,9 @@ import (
 	// "fmt"
 	// "math/rand"
 	"crypto/sha256"
+	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 
 	// "strings"
@@ -29,9 +31,9 @@ import (
 func HandleN32fCtxTerminate(request *http_wrapper.Request) *http_wrapper.Response {
 	logger.Handshake.Infof("handle PostN32fTerminate")
 
-	N32fContextInfo := request.Body.(models.N32fContextInfo)
+	n32fContextInfo := request.Body.(models.N32fContextInfo)
 
-	response, problemDetails := N32fCtxTerminateProcedure(N32fContextInfo)
+	response, problemDetails := N32fCtxTerminateProcedure(n32fContextInfo)
 
 	if response != nil {
 		return http_wrapper.NewResponse(http.StatusOK, nil, response)
@@ -45,9 +47,22 @@ func HandleN32fCtxTerminate(request *http_wrapper.Request) *http_wrapper.Respons
 	return http_wrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
 }
 
-func N32fCtxTerminateProcedure(N32fContextInfo models.N32fContextInfo) (*models.N32fContextInfo,
+func N32fCtxTerminateProcedure(n32fContextInfo models.N32fContextInfo) (*models.N32fContextInfo,
 	*models.ProblemDetails) {
-	return nil, nil
+	var responseBody models.N32fContextInfo
+
+	// delete N32fContext
+	self := sepp_context.GetSelf()
+	remotePlmnId := self.N32fContextPool[n32fContextInfo.N32fContextId].PeerInformation.RemotePlmnId
+	delete(self.PLMNSecInfo, remotePlmnId)
+	responseBody = models.N32fContextInfo{
+		N32fContextId: self.N32fContextPool[n32fContextInfo.N32fContextId].N32fContextId,
+	}
+	delete(self.N32fContextPool, n32fContextInfo.N32fContextId)
+
+	logger.Handshake.Infof("Delete %s N32fContext", remotePlmnId)
+
+	return &responseBody, nil
 }
 
 func HandleExchangeCapability(request *http_wrapper.Request) *http_wrapper.Response {
@@ -75,7 +90,7 @@ func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData)
 	self := sepp_context.GetSelf()
 	// verify fqdn
 	fqdn := secNegotiateReqData.Sender
-	if _, ok := self.PLMNSecInfo[fqdn]; !ok {
+	if _, ok := self.FqdnIpMap[fqdn]; !ok {
 		logger.Handshake.Infof("fqdn is not supported")
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "fqdn is not supported"
@@ -141,19 +156,21 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 	self := sepp_context.GetSelf()
 
 	fqdn := secParamExchReqData.Sender
-	if _, ok := self.PLMNSecInfo[fqdn]; !ok {
+	var secInfo sepp_context.SecInfo
+	if temp, ok := self.PLMNSecInfo[fqdn]; !ok {
 		logger.Handshake.Infof("fqdn is not supported", fqdn)
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "fqdn is not supported"
 		problemDetails.Status = http.StatusBadRequest
 		// TODO return error
 		return nil, &problemDetails
+	} else {
+		secInfo = temp
 	}
 
-	if _, ok := self.N32fContextPool[n32fContextId]; !ok { //for Cipher Suite Negotiation
-		secinfo := self.PLMNSecInfo[fqdn]
-		secinfo.N32fContexId = n32fContextId
-		self.PLMNSecInfo[fqdn] = secinfo
+	if secInfo.N32fContexId == "" { //for Cipher Suite Negotiation
+		secInfo.N32fContexId = fmt.Sprintf("%x", rand.Uint64())
+		self.PLMNSecInfo[fqdn] = secInfo
 		var n32fContext sepp_context.N32fContext
 		var cipherSuites sepp_context.CipherSuite
 		jweCipherSuiteList := secParamExchReqData.JweCipherSuiteList
@@ -187,10 +204,11 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		var secContext sepp_context.N32fSecContext
 		secContext.CipherSuitList = cipherSuites
 		n32fContext.SecContext = secContext
+		n32fContext.N32fContextId = n32fContextId
 
-		self.N32fContextPool[n32fContextId] = n32fContext
+		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
 
-		responseBody.N32fContextId = secParamExchReqData.N32fContextId
+		responseBody.N32fContextId = n32fContext.N32fContextId
 		responseBody.SelectedJweCipherSuite = cipherSuites.JweCipherSuite
 		responseBody.SelectedJwsCipherSuite = cipherSuites.JwsCipherSuite
 		responseBody.Sender = self.SelfFqdn
@@ -199,7 +217,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 
 	} else if secParamExchReqData.ProtectionPolicyInfo != nil {
 		keyLen := 0
-		switch self.N32fContextPool[n32fContextId].SecContext.CipherSuitList.JweCipherSuite {
+		switch self.N32fContextPool[secInfo.N32fContexId].SecContext.CipherSuitList.JweCipherSuite {
 		case "A128GCM":
 			keyLen = 16
 		case "A256GCM":
@@ -235,20 +253,20 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		if _, err := io.ReadFull(expandHkdf, sendRspKey); err != nil {
 			panic(err)
 		}
-		n32fContext, _ := self.N32fContextPool[n32fContextId]
+		n32fContext, _ := self.N32fContextPool[secInfo.N32fContexId]
 		n32fContext.SecContext.SessionKeys.SendReqKey = sendReqKey
 		n32fContext.SecContext.SessionKeys.SendResKey = sendRspKey
 		n32fContext.SecContext.SessionKeys.RecvReqKey = recvReqKey
 		n32fContext.SecContext.SessionKeys.RecvResKey = recvRspKey
 		n32fContext.SecContext.ProtectionPolicy = *secParamExchReqData.ProtectionPolicyInfo
-		self.N32fContextPool[n32fContextId] = n32fContext
-		responseBody.N32fContextId = secParamExchReqData.N32fContextId
+		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
+		responseBody.N32fContextId = n32fContext.N32fContextId
 		responseBody.SelProtectionPolicyInfo = &self.ProtectionPolicy
 		responseBody.Sender = self.SelfFqdn
 
 		return &responseBody, nil
 	} else if secParamExchReqData.IpxProviderSecInfoList != nil {
-		n32fContext, _ := self.N32fContextPool[n32fContextId]
+		n32fContext, _ := self.N32fContextPool[secInfo.N32fContexId]
 		var ipxSecInfoList []models.IpxProviderSecInfo
 		ipxSecInfoList = append(ipxSecInfoList, secParamExchReqData.IpxProviderSecInfoList...)
 		// ipxSecInfoList.IpxProviderId = secParamExchReqData.IpxProviderSecInfoList[0].IpxProviderId
@@ -264,8 +282,8 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		// 	return nil, &problemDetails
 		// }
 		n32fContext.SecContext.IPXSecInfo = ipxSecInfoList
-		self.N32fContextPool[n32fContextId] = n32fContext
-		responseBody.N32fContextId = secParamExchReqData.N32fContextId
+		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
+		responseBody.N32fContextId = n32fContext.N32fContextId
 		responseBody.IpxProviderSecInfoList = append(responseBody.IpxProviderSecInfoList, self.SelfIPXSecInfo)
 		responseBody.SelProtectionPolicyInfo = &self.ProtectionPolicy
 		responseBody.Sender = self.SelfFqdn

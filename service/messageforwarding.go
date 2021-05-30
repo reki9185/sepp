@@ -205,7 +205,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			var dataToIntegrityProtectAndCipherBlock models.DataToIntegrityProtectAndCipherBlock
 			messageId := fmt.Sprintf("%x", rand.Uint64())
 			metaData := models.MetaData{
-				N32fContextId:   secInfo.N32fContexId,
+				N32fContextId:   self.N32fContextPool[secInfo.N32fContexId].N32fContextId,
 				MessageId:       messageId,
 				AuthorizedIpxId: "NULL",
 			}

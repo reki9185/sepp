@@ -32,6 +32,7 @@ type SEPPContext struct {
 }
 
 type N32fContext struct {
+	N32fContextId   N32fContextId
 	PeerInformation N32fPeerInformation
 	SecContext      N32fSecContext
 	ContextInfo     N32fContextInfo

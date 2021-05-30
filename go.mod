@@ -6,6 +6,7 @@ require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/buger/jsonparser v1.1.1
 	github.com/calee0219/fatal v0.0.1
+	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
 	github.com/free5gc/CommonConsumerTestData v1.0.0
 	github.com/free5gc/MongoDBLibrary v1.0.0
 	github.com/free5gc/http2_util v1.0.0
@@ -22,6 +23,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/sirupsen/logrus v1.8.1
+	github.com/stamp/go-openssl v0.0.0-20151130221228-b5cda0941b72
+	github.com/stamp/go-openvpn v0.0.0-20170402154221-4b07208dbd53
 	github.com/ugorji/go v1.2.5 // indirect
 	github.com/urfave/cli v1.22.5
 	github.com/yangalan0903/openapi v0.0.0-20210414173423-ec2e658ec5f7

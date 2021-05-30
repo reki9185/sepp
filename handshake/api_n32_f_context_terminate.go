@@ -10,10 +10,80 @@
 package handshake
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
+
+	"github.com/free5gc/http_wrapper"
+	"github.com/yangalan0903/openapi"
+	"github.com/yangalan0903/openapi/models"
+	"github.com/yangalan0903/sepp/logger"
+	"github.com/yangalan0903/sepp/producer"
 )
 
 // PostN32fTerminate - N32-f Context Terminate
 func PostN32fTerminate(rspWriter http.ResponseWriter, request *http.Request) {
-	rspWriter.Write(nil)
+	var n32fContextInfo models.N32fContextInfo
+
+	requestBody, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		problemDetail := models.ProblemDetails{
+			Title:  "System failure",
+			Status: http.StatusInternalServerError,
+			Detail: err.Error(),
+			Cause:  "SYSTEM_FAILURE",
+		}
+		logger.Handshake.Errorf("Get Request Body error: %+v", err)
+		rspWriter.WriteHeader(http.StatusInternalServerError)
+		rsp, err := json.Marshal(problemDetail)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusInternalServerError, problemDetail)
+		return
+	}
+
+	err = openapi.Deserialize(&n32fContextInfo, requestBody, "application/json")
+	if err != nil {
+		problemDetail := "[Request Body] " + err.Error()
+		rspBody := models.ProblemDetails{
+			Title:  "Malformed request syntax",
+			Status: http.StatusBadRequest,
+			Detail: problemDetail,
+		}
+		logger.Handshake.Errorln(problemDetail)
+		rspWriter.WriteHeader(http.StatusBadRequest)
+		rsp, err := json.Marshal(rspBody)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusBadRequest, rsp)
+		return
+	}
+	req := http_wrapper.NewRequest(request, n32fContextInfo)
+
+	rsp := producer.HandleN32fCtxTerminate(req)
+	responseBody, err := openapi.Serialize(rsp.Body, "application/json")
+	if err != nil {
+		logger.Handshake.Errorln(err)
+		problemDetails := models.ProblemDetails{
+			Status: http.StatusInternalServerError,
+			Cause:  "SYSTEM_FAILURE",
+			Detail: err.Error(),
+		}
+		rspWriter.WriteHeader(http.StatusInternalServerError)
+		rsp, err := json.Marshal(problemDetails)
+		if err != nil {
+			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
+		}
+		rspWriter.Write(rsp)
+		// ctx.JSON(http.StatusInternalServerError, problemDetails)
+	} else {
+		rspWriter.Header().Add("Content-Type", "application/json")
+		rspWriter.WriteHeader(rsp.Status)
+		rspWriter.Write(responseBody)
+		// ctx.Data(rsp.Status, "application/json", responseBody)
+	}
 }

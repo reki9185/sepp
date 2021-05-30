@@ -20,6 +20,7 @@ import (
 	"github.com/free5gc/path_util"
 	pathUtilLogger "github.com/free5gc/path_util/logger"
 	openApiLogger "github.com/yangalan0903/openapi/logger"
+	"github.com/yangalan0903/openapi/models"
 	"github.com/yangalan0903/sepp/JOSEProtectedMessageForwarding"
 	"github.com/yangalan0903/sepp/TelescopicFqdnMapping"
 	"github.com/yangalan0903/sepp/consumer"
@@ -198,16 +199,16 @@ func (sepp *SEPP) Start() {
 	if err != nil {
 		initLog.Warnf("Initialize HTTP server: +%v", err)
 	}
-	// for _, ipAddr := range self.FqdnIpMap {
-	// 	consumer.SendExchangeCapability(ipAddr)
-	// 	initLog.Infoln("finish exchange capability")
-	// 	consumer.ExchangeCiphersuite(ipAddr)
-	// 	initLog.Infoln("finish ciphersuit exchange: %s", self.N32fContextPool)
-	// 	consumer.ExchangeProtectionPolicy(ipAddr)
-	// 	initLog.Infoln("finish protection policy exchange: %s", self.N32fContextPool)
-	// 	consumer.ExchangeIPXInfo(ipAddr)
-	// 	initLog.Infoln("finish IPX Info exchange: %s", self.N32fContextPool)
-	// }
+	for fqdn, ipAddr := range self.FqdnIpMap {
+		consumer.SendExchangeCapability(ipAddr)
+		initLog.Infoln("finish exchange capability")
+		consumer.ExchangeCiphersuite(ipAddr, fqdn)
+		initLog.Infoln("finish ciphersuit exchange: %s", self.N32fContextPool)
+		consumer.ExchangeProtectionPolicy(ipAddr, fqdn)
+		initLog.Infoln("finish protection policy exchange: %s", self.N32fContextPool)
+		consumer.ExchangeIPXInfo(ipAddr, fqdn)
+		initLog.Infoln("finish IPX Info exchange: %s", self.N32fContextPool)
+	}
 
 	serverScheme := factory.SeppConfig.Configuration.Sbi.Scheme
 	if serverScheme == "http" {
@@ -268,6 +269,15 @@ func (sepp *SEPP) Exec(c *cli.Context) error {
 
 func (sepp *SEPP) Terminate() {
 	logger.InitLog.Infof("Terminating SEPP...")
+	// send N32fContextTerminate
+	self := sepp_context.GetSelf()
+	for key, secInfo := range self.PLMNSecInfo {
+		logger.InitLog.Infof("Deregister remote SEPP: ", key)
+		n32fContextInfo := models.N32fContextInfo{
+			N32fContextId: self.N32fContextPool[secInfo.N32fContexId].N32fContextId,
+		}
+		consumer.SendN32fContextTerminate(self.FqdnIpMap[key], key, n32fContextInfo)
+	}
 	// deregister with NRF
 	problemDetails, err := consumer.SendDeregisterNFInstance()
 	if problemDetails != nil {

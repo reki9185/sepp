@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -14,14 +15,14 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
-func ExchangeCiphersuite(seppUri string) {
+func ExchangeCiphersuite(seppUri string, fqdn string) {
 	configuration := N32_Handshake.NewConfiguration()
 	configuration.SetBasePath(seppUri)
 	client := N32_Handshake.NewAPIClient(configuration)
 
 	self := sepp_context.GetSelf()
 	var secParamExchReqData models.SecParamExchReqData
-	secParamExchReqData.N32fContextId = "0600AD1855BD6008"
+	secParamExchReqData.N32fContextId = fmt.Sprintf("%x", rand.Uint64())
 	secParamExchReqData.JweCipherSuiteList = self.JweCipherSuiteList
 	secParamExchReqData.JwsCipherSuiteList = self.JwsCipherSuiteList
 	secParamExchReqData.Sender = self.SelfFqdn
@@ -40,7 +41,7 @@ func ExchangeCiphersuite(seppUri string) {
 		status := res.StatusCode
 		if status == http.StatusOK {
 			secInfo := self.PLMNSecInfo[rsp.Sender]
-			secInfo.N32fContexId = rsp.N32fContextId
+			secInfo.N32fContexId = secParamExchReqData.N32fContextId
 			self.PLMNSecInfo[rsp.Sender] = secInfo
 			var n32fContext sepp_context.N32fContext
 			var peerInfo sepp_context.N32fPeerInformation
@@ -94,7 +95,8 @@ func ExchangeCiphersuite(seppUri string) {
 			}
 			secContext.SessionKeys.RecvResKey = recvResKey
 			n32fContext.SecContext = secContext
-			self.N32fContextPool[rsp.N32fContextId] = n32fContext
+			n32fContext.N32fContextId = rsp.N32fContextId
+			self.N32fContextPool[secParamExchReqData.N32fContextId] = n32fContext
 			break
 		} else {
 			fmt.Println(fmt.Errorf("handler returned wrong status code %d", status))
@@ -103,14 +105,14 @@ func ExchangeCiphersuite(seppUri string) {
 	}
 }
 
-func ExchangeProtectionPolicy(seppUri string) {
+func ExchangeProtectionPolicy(seppUri string, fqdn string) {
 	configuration := N32_Handshake.NewConfiguration()
 	configuration.SetBasePath(seppUri)
 	client := N32_Handshake.NewAPIClient(configuration)
 
 	self := sepp_context.GetSelf()
 	var secParamExchReqData models.SecParamExchReqData
-	secParamExchReqData.N32fContextId = "0600AD1855BD6008"
+	secParamExchReqData.N32fContextId = self.PLMNSecInfo[fqdn].N32fContexId
 	secParamExchReqData.ProtectionPolicyInfo = &self.ProtectionPolicy
 	secParamExchReqData.Sender = self.SelfFqdn
 
@@ -127,9 +129,9 @@ func ExchangeProtectionPolicy(seppUri string) {
 		}
 		status := res.StatusCode
 		if status == http.StatusOK {
-			n32fContext := self.N32fContextPool[rsp.N32fContextId]
+			n32fContext := self.N32fContextPool[secParamExchReqData.N32fContextId]
 			n32fContext.SecContext.ProtectionPolicy = *rsp.SelProtectionPolicyInfo
-			self.N32fContextPool[rsp.N32fContextId] = n32fContext
+			self.N32fContextPool[secParamExchReqData.N32fContextId] = n32fContext
 			break
 		} else {
 			fmt.Println(fmt.Errorf("handler returned wrong status code %d", status))
@@ -138,14 +140,14 @@ func ExchangeProtectionPolicy(seppUri string) {
 	}
 }
 
-func ExchangeIPXInfo(seppUri string) {
+func ExchangeIPXInfo(seppUri string, fqdn string) {
 	configuration := N32_Handshake.NewConfiguration()
 	configuration.SetBasePath(seppUri)
 	client := N32_Handshake.NewAPIClient(configuration)
 
 	self := sepp_context.GetSelf()
 	var secParamExchReqData models.SecParamExchReqData
-	secParamExchReqData.N32fContextId = "0600AD1855BD6008"
+	secParamExchReqData.N32fContextId = self.PLMNSecInfo[fqdn].N32fContexId
 	secParamExchReqData.IpxProviderSecInfoList = append(secParamExchReqData.IpxProviderSecInfoList, self.SelfIPXSecInfo)
 	secParamExchReqData.Sender = self.SelfFqdn
 
@@ -162,9 +164,9 @@ func ExchangeIPXInfo(seppUri string) {
 		}
 		status := res.StatusCode
 		if status == http.StatusOK {
-			n32fContext := self.N32fContextPool[rsp.Sender]
+			n32fContext := self.N32fContextPool[secParamExchReqData.N32fContextId]
 			n32fContext.SecContext.IPXSecInfo = append(n32fContext.SecContext.IPXSecInfo, rsp.IpxProviderSecInfoList...)
-			self.N32fContextPool[rsp.Sender] = n32fContext
+			self.N32fContextPool[secParamExchReqData.N32fContextId] = n32fContext
 			break
 		} else {
 			fmt.Println(fmt.Errorf("handler returned wrong status code %d", status))
