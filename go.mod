@@ -3,6 +3,8 @@ module github.com/yangalan0903/sepp
 go 1.14
 
 require (
+	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
+	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15 // indirect
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
 	github.com/buger/jsonparser v1.1.1
 	github.com/calee0219/fatal v0.0.1
@@ -33,6 +35,7 @@ require (
 	golang.org/x/net v0.0.0-20210423184538-5f58ad60dda6
 	golang.org/x/sys v0.0.0-20210426080607-c94f62235c83 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/square/go-jose.v2 v2.5.1
 	gopkg.in/yaml.v2 v2.4.0
 )

@@ -16,11 +16,11 @@ import (
 	"github.com/free5gc/http_wrapper"
 	"github.com/yangalan0903/openapi/models"
 	sepp_context "github.com/yangalan0903/sepp/context"
+	"github.com/yangalan0903/sepp/jose"
+	"github.com/yangalan0903/sepp/jose/json"
 	"github.com/yangalan0903/sepp/jsonhandler"
 	"github.com/yangalan0903/sepp/logger"
 	"golang.org/x/net/http2"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/json"
 )
 
 var (

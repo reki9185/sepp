@@ -11,7 +11,7 @@ import (
 	"github.com/yangalan0903/openapi/JOSEProtectedMessageForwarding"
 	"github.com/yangalan0903/openapi/models"
 	sepp_context "github.com/yangalan0903/sepp/context"
-	"gopkg.in/square/go-jose.v2"
+	"github.com/yangalan0903/sepp/jose"
 )
 
 func ForwardMessage(n32fContextId string, plainText, aad []byte, seppUri string, key []byte) (models.N32fReformattedRspMsg, error) {
