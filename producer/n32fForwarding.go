@@ -137,10 +137,7 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 	var dataToIntegrityProtectBlock models.DataToIntegrityProtectBlock
 	var dataToIntegrityProtectAndCipherBlock models.DataToIntegrityProtectAndCipherBlock
 
-	buf := make([]byte, base64.RawURLEncoding.DecodedLen(len(decoded)))
-	n, err := base64.RawURLEncoding.Decode(buf, decoded)
-
-	if err := json.Unmarshal(buf[:n], &dataToIntegrityProtectBlock); err != nil {
+	if err := json.Unmarshal(decoded, &dataToIntegrityProtectBlock); err != nil {
 		logger.N32fForward.Errorln(err)
 	}
 	n32fContextId := dataToIntegrityProtectBlock.MetaData.N32fContextId
@@ -159,8 +156,7 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 	if err != nil {
 		logger.N32fForward.Errorln("JWE decrypt error", err)
 	}
-	n, _ = base64.RawURLEncoding.Decode(buf, decrypted)
-	if err := json.Unmarshal(buf[:n], &dataToIntegrityProtectAndCipherBlock); err != nil {
+	if err := json.Unmarshal(decrypted, &dataToIntegrityProtectAndCipherBlock); err != nil {
 		logger.N32fForward.Errorln("json unmarshal error", err)
 	}
 
@@ -268,13 +264,18 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 	payload := jsonhandler.ParseJsonBody(rspBody)
 
 	var ieList []models.IeInfo
-	for _, value := range self.N32fContextPool[n32fContextId].SecContext.ProtectionPolicy.ApiIeMappingList {
+	for _, value := range self.LocalProtectionPolicy.ApiIeMappingList {
 		if value.ApiSignature.Uri == dataToIntegrityProtectBlock.RequestLine.Path && value.ApiMethod == dataToIntegrityProtectBlock.RequestLine.Method {
 			ieList = value.IeList
 			break
 		}
 	}
+	fmt.Println(dataToIntegrityProtectBlock.RequestLine.Path)
 	jweKey := self.N32fContextPool[n32fContextId].SecContext.SessionKeys.RecvResKey
+	seq := self.N32fContextPool[n32fContextId].SecContext.IVs.RecvReqSeq
+	n32fContext.SecContext.IVs.RecvReqSeq = seq + 1
+	self.N32fContextPool[n32fContextId] = n32fContext
+	iv := self.N32fContextPool[n32fContextId].SecContext.IVs.RecvResIV
 	if ieList == nil {
 		problemDetail := models.ProblemDetails{
 			Title:  "This api not support",
@@ -318,27 +319,23 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 
 	var aad, clearText []byte
 	if rawAad, err := json.Marshal(rspDataToIntegrityProtectBlock); err == nil {
-		buf := make([]byte, base64.RawURLEncoding.EncodedLen(len(rawAad)))
-		base64.RawURLEncoding.Encode(buf, rawAad)
-		aad = buf
+		aad = rawAad
 	}
 	if rawClearText, err := json.Marshal(rspDataToIntegrityProtectAndCipherBlock); err == nil {
-		buf := make([]byte, base64.RawURLEncoding.EncodedLen(len(rawClearText)))
-		base64.RawURLEncoding.Encode(buf, rawClearText)
-		clearText = buf
+		clearText = rawClearText
 	}
 
 	var encrypter jose.Encrypter
 	enc := self.N32fContextPool[n32fContextId].SecContext.CipherSuitList.JweCipherSuite
 	switch enc {
 	case "A128GCM":
-		if temp, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: jweKey}, nil); err != nil {
+		if temp, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: jweKey, PBES2Count: int(seq), PBES2Salt: iv}, nil); err != nil {
 			panic(err)
 		} else {
 			encrypter = temp
 		}
 	case "A256GCM":
-		if temp, err := jose.NewEncrypter(jose.A256GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: jweKey}, nil); err != nil {
+		if temp, err := jose.NewEncrypter(jose.A256GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: jweKey, PBES2Count: int(seq), PBES2Salt: iv}, nil); err != nil {
 			panic(err)
 		} else {
 			encrypter = temp

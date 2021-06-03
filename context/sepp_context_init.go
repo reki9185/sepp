@@ -78,14 +78,15 @@ func InitSeppContext(context *SEPPContext) {
 		}
 	}
 
-	BuildProtectionPolice(context)
+	BuildLocalProtectionPolice(context)
+	BuildIpxProtectionPolice(context)
 	context.Url = string(context.UriScheme) + "://" + context.RegisterIPv4 + ":" + strconv.Itoa(context.SBIPort)
 	context.PlmnList = append(context.PlmnList, configuration.PlmnSupportList...)
 
 	fmt.Println("sepp context = ", context)
 }
 
-func BuildProtectionPolice(context *SEPPContext) {
+func BuildLocalProtectionPolice(context *SEPPContext) {
 	var apiIeMapping models.ApiIeMapping
 	var apiSignature models.ApiSignature
 	apiSignature.Uri = "/nnrf-disc/v1/nf-instances"
@@ -96,8 +97,8 @@ func BuildProtectionPolice(context *SEPPContext) {
 	ieInfo.IeType = models.IeType_UEID
 	ieInfo.ReqIe = "Supi"
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
-	context.ProtectionPolicy.ApiIeMappingList = append(context.ProtectionPolicy.ApiIeMappingList, apiIeMapping)
-	context.ProtectionPolicy.DataTypeEncPolicy = append(context.ProtectionPolicy.DataTypeEncPolicy, models.IeType_UEID)
+	context.LocalProtectionPolicy.ApiIeMappingList = append(context.LocalProtectionPolicy.ApiIeMappingList, apiIeMapping)
+	context.LocalProtectionPolicy.DataTypeEncPolicy = append(context.LocalProtectionPolicy.DataTypeEncPolicy, models.IeType_UEID)
 
 	apiIeMapping = models.ApiIeMapping{}
 	apiSignature = models.ApiSignature{}
@@ -134,7 +135,22 @@ func BuildProtectionPolice(context *SEPPContext) {
 		RspIe:  "/5gAuthData/autn",
 	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
-	context.ProtectionPolicy.ApiIeMappingList = append(context.ProtectionPolicy.ApiIeMappingList, apiIeMapping)
-	context.ProtectionPolicy.DataTypeEncPolicy = append(context.ProtectionPolicy.DataTypeEncPolicy, models.IeType_UEID)
+	context.LocalProtectionPolicy.ApiIeMappingList = append(context.LocalProtectionPolicy.ApiIeMappingList, apiIeMapping)
+	context.LocalProtectionPolicy.DataTypeEncPolicy = append(context.LocalProtectionPolicy.DataTypeEncPolicy, models.IeType_AUTHENTICATION_MATERIAL)
+
+}
+
+func BuildIpxProtectionPolice(context *SEPPContext) {
+	var apiIeMapping models.ApiIeMapping
+	var apiSignature models.ApiSignature
+	apiSignature.Uri = "/nnrf-disc/v1/nf-instances"
+	apiIeMapping.ApiSignature = apiSignature
+	apiIeMapping.ApiMethod = models.HttpMethod_GET
+	var ieInfo models.IeInfo
+	ieInfo.IeLoc = models.IeLocation_URI_PARAM
+	ieInfo.IeType = models.IeType_NONSENSITIVE
+	ieInfo.ReqIe = "target-nf-type"
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	context.IPXProtectionPolicy = append(context.IPXProtectionPolicy, apiIeMapping)
 
 }

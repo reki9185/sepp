@@ -28,7 +28,8 @@ type SEPPContext struct {
 	NrfUri                     string
 	PlmnList                   []models.PlmnId
 	N32fContextPool            map[N32fContextId]N32fContext
-	ProtectionPolicy           models.ProtectionPolicy
+	LocalProtectionPolicy      models.ProtectionPolicy
+	IPXProtectionPolicy        []models.ApiIeMapping
 }
 
 type N32fContext struct {
@@ -50,10 +51,20 @@ type N32fSecContext struct {
 	ModificationPolicyIds   string
 	DataTypeEncrypPolicyIds string
 	Counters                string
-	IVs                     string
+	IVs                     IvList
 	IPXSecInfo              []models.IpxProviderSecInfo
 }
 
+type IvList struct {
+	SendReqIV  []byte
+	SendReqSeq uint32
+	SendResIV  []byte
+	SendResSeq uint32
+	RecvReqIV  []byte
+	RecvReqSeq uint32
+	RecvResIV  []byte
+	RecvResSeq uint32
+}
 type SessionKeyList struct {
 	SendReqKey []byte
 	SendResKey []byte
@@ -86,7 +97,3 @@ func Init() {
 func GetSelf() *SEPPContext {
 	return &seppContext
 }
-
-// func (a *SEPPContext) GetSelfID() string {
-// 	return a.NfId
-// }

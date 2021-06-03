@@ -231,12 +231,28 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 			panic(err)
 		}
 		hash = sha256.New
+		info = []byte("N32" + secParamExchReqData.N32fContextId + "parallel_request_iv_salt")
+		expandHkdf = hkdf.Expand(hash, masterKey, info)
+		recvReqIv := make([]byte, 8)
+		if _, err := io.ReadFull(expandHkdf, recvReqIv); err != nil {
+			panic(err)
+		}
+
+		hash = sha256.New
 		info = []byte("N32" + secParamExchReqData.N32fContextId + "parallel_response_key")
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
 		recvRspKey := make([]byte, keyLen)
 		if _, err := io.ReadFull(expandHkdf, recvRspKey); err != nil {
 			panic(err)
 		}
+		hash = sha256.New
+		info = []byte("N32" + secParamExchReqData.N32fContextId + "parallel_response_iv_salt")
+		expandHkdf = hkdf.Expand(hash, masterKey, info)
+		recvRspIv := make([]byte, 8)
+		if _, err := io.ReadFull(expandHkdf, recvRspIv); err != nil {
+			panic(err)
+		}
+
 		hash = sha256.New
 		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_request_key")
 
@@ -246,6 +262,14 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 			panic(err)
 		}
 		hash = sha256.New
+		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_request_iv_salt")
+		expandHkdf = hkdf.Expand(hash, masterKey, info)
+		sendReqIv := make([]byte, 8)
+		if _, err := io.ReadFull(expandHkdf, sendReqIv); err != nil {
+			panic(err)
+		}
+
+		hash = sha256.New
 		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_response_key")
 
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
@@ -253,15 +277,30 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		if _, err := io.ReadFull(expandHkdf, sendRspKey); err != nil {
 			panic(err)
 		}
+		hash = sha256.New
+		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_response_iv_salt")
+		expandHkdf = hkdf.Expand(hash, masterKey, info)
+		sendRspIv := make([]byte, 8)
+		if _, err := io.ReadFull(expandHkdf, sendRspIv); err != nil {
+			panic(err)
+		}
 		n32fContext, _ := self.N32fContextPool[secInfo.N32fContexId]
 		n32fContext.SecContext.SessionKeys.SendReqKey = sendReqKey
 		n32fContext.SecContext.SessionKeys.SendResKey = sendRspKey
 		n32fContext.SecContext.SessionKeys.RecvReqKey = recvReqKey
 		n32fContext.SecContext.SessionKeys.RecvResKey = recvRspKey
-		n32fContext.SecContext.ProtectionPolicy = *secParamExchReqData.ProtectionPolicyInfo
+		n32fContext.SecContext.IVs.SendReqIV = sendReqIv
+		n32fContext.SecContext.IVs.SendReqSeq = 0
+		n32fContext.SecContext.IVs.SendResIV = sendRspIv
+		n32fContext.SecContext.IVs.SendResSeq = 0
+		n32fContext.SecContext.IVs.RecvReqIV = recvReqIv
+		n32fContext.SecContext.IVs.RecvReqSeq = 0
+		n32fContext.SecContext.IVs.RecvResIV = recvRspIv
+		n32fContext.SecContext.IVs.RecvResSeq = 0
+		n32fContext.SecContext.ProtectionPolicy.ApiIeMappingList = secParamExchReqData.ProtectionPolicyInfo.ApiIeMappingList
 		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
 		responseBody.N32fContextId = n32fContext.N32fContextId
-		responseBody.SelProtectionPolicyInfo = &self.ProtectionPolicy
+		responseBody.SelProtectionPolicyInfo = &models.ProtectionPolicy{ApiIeMappingList: self.IPXProtectionPolicy}
 		responseBody.Sender = self.SelfFqdn
 
 		return &responseBody, nil
@@ -285,7 +324,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
 		responseBody.N32fContextId = n32fContext.N32fContextId
 		responseBody.IpxProviderSecInfoList = append(responseBody.IpxProviderSecInfoList, self.SelfIPXSecInfo)
-		responseBody.SelProtectionPolicyInfo = &self.ProtectionPolicy
+		responseBody.SelProtectionPolicyInfo = &self.LocalProtectionPolicy
 		responseBody.Sender = self.SelfFqdn
 		logger.Handshake.Infoln("param exchange finish:%s", self.N32fContextPool)
 		return &responseBody, nil

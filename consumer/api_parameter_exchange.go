@@ -93,6 +93,47 @@ func ExchangeCiphersuite(seppUri string, fqdn string) {
 			if _, err := io.ReadFull(expandHkdf, recvResKey); err != nil {
 				panic(err)
 			}
+			hash = sha256.New
+			info = []byte("N32" + rsp.N32fContextId + "parallel_request_iv_salt")
+
+			expandHkdf = hkdf.Expand(hash, masterKey, info)
+			sendReqIv := make([]byte, 8)
+			if _, err := io.ReadFull(expandHkdf, sendReqIv); err != nil {
+				panic(err)
+			}
+			secContext.IVs.SendReqIV = sendReqIv
+			secContext.IVs.RecvReqSeq = 0
+			hash = sha256.New
+			info = []byte("N32" + rsp.N32fContextId + "parallel_response_iv_salt")
+
+			expandHkdf = hkdf.Expand(hash, masterKey, info)
+			sendRspIv := make([]byte, 8)
+			if _, err := io.ReadFull(expandHkdf, sendRspIv); err != nil {
+				panic(err)
+			}
+			secContext.IVs.SendResIV = sendRspIv
+			secContext.IVs.SendResSeq = 0
+			hash = sha256.New
+			info = []byte("N32" + rsp.N32fContextId + "reverse_request_iv_salt")
+
+			expandHkdf = hkdf.Expand(hash, masterKey, info)
+			recvReqIv := make([]byte, 8)
+			if _, err := io.ReadFull(expandHkdf, recvReqIv); err != nil {
+				panic(err)
+			}
+			secContext.IVs.RecvReqIV = recvReqIv
+			secContext.IVs.RecvReqSeq = 0
+			hash = sha256.New
+			info = []byte("N32" + rsp.N32fContextId + "reverse_response_iv_salt")
+
+			expandHkdf = hkdf.Expand(hash, masterKey, info)
+			recvResIv := make([]byte, 8)
+			if _, err := io.ReadFull(expandHkdf, recvResIv); err != nil {
+				panic(err)
+			}
+			secContext.IVs.RecvResIV = recvResIv
+			secContext.IVs.RecvResSeq = 0
+
 			secContext.SessionKeys.RecvResKey = recvResKey
 			n32fContext.SecContext = secContext
 			n32fContext.N32fContextId = rsp.N32fContextId
@@ -113,7 +154,7 @@ func ExchangeProtectionPolicy(seppUri string, fqdn string) {
 	self := sepp_context.GetSelf()
 	var secParamExchReqData models.SecParamExchReqData
 	secParamExchReqData.N32fContextId = self.PLMNSecInfo[fqdn].N32fContexId
-	secParamExchReqData.ProtectionPolicyInfo = &self.ProtectionPolicy
+	secParamExchReqData.ProtectionPolicyInfo = &models.ProtectionPolicy{ApiIeMappingList: self.IPXProtectionPolicy}
 	secParamExchReqData.Sender = self.SelfFqdn
 
 	var res *http.Response

@@ -49,6 +49,8 @@ var (
 func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Request) {
 	logger.Messageforward.Infoln("forward message start")
 
+	fmt.Println("52", request.URL.Path)
+
 	requestBody, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		problemDetail := models.ProblemDetails{
@@ -237,7 +239,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 
 			var ieList []models.IeInfo
 
-			for _, value := range self.N32fContextPool[secInfo.N32fContexId].SecContext.ProtectionPolicy.ApiIeMappingList {
+			for _, value := range self.LocalProtectionPolicy.ApiIeMappingList {
 				if value.ApiSignature.Uri == request.URL.Path && value.ApiMethod == models.HttpMethod(request.Method) {
 					ieList = value.IeList
 					break
@@ -250,7 +252,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 					Status: http.StatusBadRequest,
 					Cause:  "This api not support",
 				}
-				logger.Messageforward.Errorf("This api not support")
+				logger.Messageforward.Errorln("This api not support:", request.URL.Path)
 				rspWriter.WriteHeader(http.StatusBadRequest)
 				rsp, err := json.Marshal(problemDetail)
 				if err != nil {
@@ -308,18 +310,17 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 
 			var aad, clearText []byte
 			if rawAad, err := json.Marshal(dataToIntegrityProtectBlock); err == nil {
-				buf := make([]byte, base64.RawURLEncoding.EncodedLen(len(rawAad)))
-				base64.RawURLEncoding.Encode(buf, rawAad)
-				aad = buf
+				aad = rawAad
 			}
 			if rawClearText, err := json.Marshal(dataToIntegrityProtectAndCipherBlock); err == nil {
-				buf := make([]byte, base64.RawURLEncoding.EncodedLen(len(rawClearText)))
-				base64.RawURLEncoding.Encode(buf, rawClearText)
-				clearText = buf
+				clearText = rawClearText
 			}
 
 			logger.Messageforward.Infoln("start send")
-			rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, remoteSeppAddr, jweKey)
+			logger.Messageforward.Infoln("ssd:", aad)
+
+			// rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, remoteSeppAddr, jweKey)
+			rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, "https://10.10.0.39:8000/"+remoteSeppAddr[8:], jweKey)
 
 			flatJweJson := rsp.ReformattedData
 			var rawJSONWebEncryption jose.RawJSONWebEncryption
@@ -388,10 +389,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			var rspDataToIntegrityProtectBlock models.DataToIntegrityProtectBlock
 			var rspDataToIntegrityProtectAndCipherBlock models.DataToIntegrityProtectAndCipherBlock
 
-			buf := make([]byte, base64.RawURLEncoding.DecodedLen(len(decoded)))
-			n, err := base64.RawURLEncoding.Decode(buf, decoded)
-
-			if err := json.Unmarshal(buf[:n], &rspDataToIntegrityProtectBlock); err != nil {
+			if err := json.Unmarshal(decoded, &rspDataToIntegrityProtectBlock); err != nil {
 				logger.N32fForward.Errorln(err)
 			}
 
@@ -431,12 +429,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			if err != nil {
 				logger.Messageforward.Errorln("JWE decrypt error:", err)
 			}
-
-			n, err = base64.RawURLEncoding.Decode(buf, decrypted)
-			if err != nil {
-				logger.Messageforward.Errorln("base64URL data decode error:", err)
-			}
-			if err := json.Unmarshal(buf[:n], &rspDataToIntegrityProtectAndCipherBlock); err != nil {
+			if err := json.Unmarshal(decrypted, &rspDataToIntegrityProtectAndCipherBlock); err != nil {
 				logger.Messageforward.Errorln("json unmarshal error:", err)
 			}
 			rspBody := jsonhandler.BuildJsonBody(rspDataToIntegrityProtectBlock.Payload, rspDataToIntegrityProtectAndCipherBlock)

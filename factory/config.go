@@ -5,8 +5,8 @@
 package factory
 
 import (
-	"github.com/free5gc/logger_util"
 	"github.com/yangalan0903/openapi/models"
+	"github.com/yangalan0903/sepp/logger_util"
 )
 
 const (
@@ -31,12 +31,12 @@ const (
 )
 
 type Configuration struct {
-	Fqdn            string               `yaml:"fqdn,omitempty"`
-	Sbi             *Sbi                 `yaml:"sbi,omitempty"`
-	FqdnSupportList []FqdnIpMap          `yaml:"fqdnSupportList,omitempty"`
-	NrfUri          string               `yaml:"nrfUri,omitempty"`
-	PlmnSupportList []models.PlmnId      `yaml:"plmnSupportList,omitempty"`
-	GroupId         string               `yaml:"groupId,omitempty"`
+	Fqdn            string          `yaml:"fqdn,omitempty"`
+	Sbi             *Sbi            `yaml:"sbi,omitempty"`
+	FqdnSupportList []FqdnIpMap     `yaml:"fqdnSupportList,omitempty"`
+	NrfUri          string          `yaml:"nrfUri,omitempty"`
+	PlmnSupportList []models.PlmnId `yaml:"plmnSupportList,omitempty"`
+	GroupId         string          `yaml:"groupId,omitempty"`
 }
 
 type Sbi struct {
@@ -53,7 +53,7 @@ type Security struct {
 
 type FqdnIpMap struct {
 	Fqdn string
-	Ip string
+	Ip   string
 }
 
 func (c *Config) GetVersion() string {

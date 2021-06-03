@@ -24,15 +24,21 @@ func ForwardMessage(n32fContextId string, plainText, aad []byte, seppUri string,
 	self := sepp_context.GetSelf()
 	var encrypter jose.Encrypter
 	enc := self.N32fContextPool[n32fContextId].SecContext.CipherSuitList.JweCipherSuite
+	seq := self.N32fContextPool[n32fContextId].SecContext.IVs.SendReqSeq
+	n32fContext := self.N32fContextPool[n32fContextId]
+	n32fContext.SecContext.IVs.SendReqSeq = seq + 1
+	self.N32fContextPool[n32fContextId] = n32fContext
+	iv := self.N32fContextPool[n32fContextId].SecContext.IVs.SendReqIV
+
 	switch enc {
 	case "A128GCM":
-		if temp, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: key}, nil); err != nil {
+		if temp, err := jose.NewEncrypter(jose.A128GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: key, PBES2Count: int(seq), PBES2Salt: iv}, nil); err != nil {
 			panic(err)
 		} else {
 			encrypter = temp
 		}
 	case "A256GCM":
-		if temp, err := jose.NewEncrypter(jose.A256GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: key}, nil); err != nil {
+		if temp, err := jose.NewEncrypter(jose.A256GCM, jose.Recipient{Algorithm: jose.DIRECT, Key: key, PBES2Count: int(seq), PBES2Salt: iv}, nil); err != nil {
 			panic(err)
 		} else {
 			encrypter = temp
@@ -49,6 +55,7 @@ func ForwardMessage(n32fContextId string, plainText, aad []byte, seppUri string,
 	rawJSONWebEncryption := object.Original
 	if rawJSONWebEncryption.Aad != nil {
 		if data, err := rawJSONWebEncryption.Aad.MarshalJSON(); err == nil {
+			fmt.Println("58 :", data)
 			if err := json.Unmarshal(data, &flatJweJson.Aad); err != nil {
 				fmt.Println(err)
 			}

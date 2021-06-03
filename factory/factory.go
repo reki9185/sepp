@@ -1,5 +1,5 @@
 /*
- * AUSF Configuration Factory
+ * SEPP Configuration Factory
  */
 
 package factory
@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"gopkg.in/yaml.v2"
 	"github.com/yangalan0903/sepp/logger"
+	"gopkg.in/yaml.v2"
 )
 
 var SeppConfig Config

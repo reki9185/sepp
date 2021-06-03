@@ -12,6 +12,7 @@ type Logger struct {
 	UDR   *LogSetting `yaml:"UDR"`
 	NEF   *LogSetting `yaml:"NEF"`
 	WEBUI *LogSetting `yaml:"WEBUI"`
+	SEPP  *LogSetting `yaml:"SEPP"`
 
 	Aper                         *LogSetting `yaml:"Aper"`
 	CommonConsumerTest           *LogSetting `yaml:"CommonConsumerTest"`

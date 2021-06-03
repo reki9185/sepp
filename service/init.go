@@ -93,11 +93,11 @@ func (*SEPP) setLogLevel() {
 		return
 	}
 
-	if factory.SeppConfig.Logger.AUSF != nil {
-		if factory.SeppConfig.Logger.AUSF.DebugLevel != "" {
-			if level, err := logrus.ParseLevel(factory.SeppConfig.Logger.AUSF.DebugLevel); err != nil {
+	if factory.SeppConfig.Logger.SEPP != nil {
+		if factory.SeppConfig.Logger.SEPP.DebugLevel != "" {
+			if level, err := logrus.ParseLevel(factory.SeppConfig.Logger.SEPP.DebugLevel); err != nil {
 				initLog.Warnf("SEPP Log level [%s] is invalid, set to [info] level",
-					factory.SeppConfig.Logger.AUSF.DebugLevel)
+					factory.SeppConfig.Logger.SEPP.DebugLevel)
 				logger.SetLogLevel(logrus.InfoLevel)
 			} else {
 				initLog.Infof("SEPP Log level is set to [%s] level", level)
@@ -107,7 +107,7 @@ func (*SEPP) setLogLevel() {
 			initLog.Warnln("SEPP Log level not set. Default set to [info] level")
 			logger.SetLogLevel(logrus.InfoLevel)
 		}
-		logger.SetReportCaller(factory.SeppConfig.Logger.AUSF.ReportCaller)
+		logger.SetReportCaller(factory.SeppConfig.Logger.SEPP.ReportCaller)
 	}
 
 	if factory.SeppConfig.Logger.PathUtil != nil {

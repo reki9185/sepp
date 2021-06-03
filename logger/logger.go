@@ -53,14 +53,14 @@ func init() {
 	InitLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Init"})
 	CfgLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "CFG"})
 	Handshake = log.WithFields(logrus.Fields{"component": "SEPP", "category": "HandShakeLog"})
-	ExchangeCapability = log.WithFields(logrus.Fields{"component": "SEPP", "category": "HandShakeLog"})
+	ExchangeCapability = log.WithFields(logrus.Fields{"component": "SEPP", "category": "ExchangeCapability"})
 	Messageforward = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Messageforward"})
 	N32fForward = log.WithFields(logrus.Fields{"component": "SEPP", "category": "N32fForward"})
 	FQDNMappingLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "FQDNMapping"})
 	HandlerLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Handler"})
 	ContextLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "ctx"})
 	ConsumerLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "Consumer"})
-	GinLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "GIN"})
+	GinLog = log.WithFields(logrus.Fields{"component": "SEPP", "category": "MUX"})
 }
 
 func SetLogLevel(level logrus.Level) {
