@@ -53,8 +53,6 @@ var (
 func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Request) {
 	logger.Messageforward.Infoln("forward message start")
 
-	fmt.Println("52", request.URL.Path)
-
 	requestBody, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		problemDetail := models.ProblemDetails{
@@ -321,7 +319,6 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			}
 
 			logger.Messageforward.Infoln("start send")
-			logger.Messageforward.Infoln("ssd:", aad)
 
 			// rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, remoteSeppAddr, jweKey)
 			rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, "https://10.10.0.39:8000/"+remoteSeppAddr[8:], jweKey)
@@ -353,7 +350,6 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						rspWriter.Write(rspBody)
 					}
 					self := sepp_context.GetSelf()
-					fmt.Println(n32fContextId)
 					if problem := verifyJSONWebSignature(object, self.N32fContextPool[n32fContextId].SecContext.IPXSecInfo[0], modifications.Identity); problem != nil {
 						rspBody, _ := json.Marshal(problem)
 						rspWriter.WriteHeader(http.StatusBadRequest)

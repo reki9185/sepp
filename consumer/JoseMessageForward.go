@@ -55,7 +55,6 @@ func ForwardMessage(n32fContextId string, plainText, aad []byte, seppUri string,
 	rawJSONWebEncryption := object.Original
 	if rawJSONWebEncryption.Aad != nil {
 		if data, err := rawJSONWebEncryption.Aad.MarshalJSON(); err == nil {
-			fmt.Println("58 :", data)
 			if err := json.Unmarshal(data, &flatJweJson.Aad); err != nil {
 				fmt.Println(err)
 			}
