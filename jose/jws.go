@@ -27,7 +27,7 @@ import (
 )
 
 // rawJSONWebSignature represents a raw JWS JSON object. Used for parsing/serializing.
-type rawJSONWebSignature struct {
+type RawJSONWebSignature struct {
 	Payload    *ByteBuffer        `json:"payload,omitempty"`
 	Signatures []rawSignatureInfo `json:"signatures,omitempty"`
 	Protected  *ByteBuffer        `json:"protected,omitempty"`
@@ -72,7 +72,7 @@ type Signature struct {
 
 	protected *RawHeader
 	header    *RawHeader
-	original  *rawSignatureInfo
+	Original  *rawSignatureInfo
 }
 
 // ParseSigned parses a signed message in compact or full serialization format.
@@ -107,11 +107,11 @@ func (obj JSONWebSignature) computeAuthData(payload []byte, signature *Signature
 
 	protectedHeader := new(RawHeader)
 
-	if signature.original != nil && signature.original.Protected != nil {
-		if err := json.Unmarshal(signature.original.Protected.bytes(), protectedHeader); err != nil {
+	if signature.Original != nil && signature.Original.Protected != nil {
+		if err := json.Unmarshal(signature.Original.Protected.bytes(), protectedHeader); err != nil {
 			return nil, err
 		}
-		authData.WriteString(signature.original.Protected.base64())
+		authData.WriteString(signature.Original.Protected.base64())
 	} else if signature.protected != nil {
 		protectedHeader = signature.protected
 		authData.WriteString(base64.RawURLEncoding.EncodeToString(mustSerializeJSON(protectedHeader)))
@@ -139,17 +139,17 @@ func (obj JSONWebSignature) computeAuthData(payload []byte, signature *Signature
 
 // parseSignedFull parses a message in full format.
 func parseSignedFull(input string) (*JSONWebSignature, error) {
-	var parsed rawJSONWebSignature
+	var parsed RawJSONWebSignature
 	err := json.Unmarshal([]byte(input), &parsed)
 	if err != nil {
 		return nil, err
 	}
 
-	return parsed.sanitized()
+	return parsed.Sanitized()
 }
 
 // sanitized produces a cleaned-up JWS object from the raw JSON.
-func (parsed *rawJSONWebSignature) sanitized() (*JSONWebSignature, error) {
+func (parsed *RawJSONWebSignature) Sanitized() (*JSONWebSignature, error) {
 	if parsed.Payload == nil {
 		return nil, fmt.Errorf("square/go-jose: missing payload in JWS message")
 	}
@@ -186,7 +186,7 @@ func (parsed *rawJSONWebSignature) sanitized() (*JSONWebSignature, error) {
 		// This is used in computeAuthData, which will first attempt to use
 		// the original bytes of a protected header, and fall back on marshaling the
 		// header struct only if those bytes are not available.
-		signature.original = &rawSignatureInfo{
+		signature.Original = &rawSignatureInfo{
 			Protected: parsed.Protected,
 			Header:    parsed.Header,
 			Signature: parsed.Signature,
@@ -267,7 +267,7 @@ func (parsed *rawJSONWebSignature) sanitized() (*JSONWebSignature, error) {
 		original := sig
 
 		obj.Signatures[i].header = sig.Header
-		obj.Signatures[i].original = &original
+		obj.Signatures[i].Original = &original
 	}
 
 	return obj, nil
@@ -301,12 +301,12 @@ func parseSignedCompact(input string, payload []byte) (*JSONWebSignature, error)
 		return nil, err
 	}
 
-	raw := &rawJSONWebSignature{
+	raw := &RawJSONWebSignature{
 		Payload:   newBuffer(payload),
 		Protected: newBuffer(rawProtected),
 		Signature: newBuffer(signature),
 	}
-	return raw.sanitized()
+	return raw.Sanitized()
 }
 
 func (obj JSONWebSignature) compactSerialize(detached bool) (string, error) {
@@ -337,7 +337,7 @@ func (obj JSONWebSignature) DetachedCompactSerialize() (string, error) {
 
 // FullSerialize serializes an object using the full JSON serialization format.
 func (obj JSONWebSignature) FullSerialize() string {
-	raw := rawJSONWebSignature{
+	raw := RawJSONWebSignature{
 		Payload: newBuffer(obj.payload),
 	}
 

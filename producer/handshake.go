@@ -208,7 +208,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 
 		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
 
-		responseBody.N32fContextId = n32fContext.N32fContextId
+		responseBody.N32fContextId = secInfo.N32fContexId
 		responseBody.SelectedJweCipherSuite = cipherSuites.JweCipherSuite
 		responseBody.SelectedJwsCipherSuite = cipherSuites.JwsCipherSuite
 		responseBody.Sender = self.SelfFqdn

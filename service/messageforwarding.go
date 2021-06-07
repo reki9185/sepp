@@ -2,14 +2,18 @@ package service
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -332,7 +336,66 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			if data, err := base64.RawURLEncoding.DecodeString(flatJweJson.Aad); err != nil {
 				logger.Messageforward.Errorln("Decode flatJweJson.Aad error:", err)
 			} else {
-				rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: data}
+				if rsp.ModificationsBlock != nil {
+					var dataToIntegrityProtectBlockBeforePatch models.DataToIntegrityProtectBlock
+					json.Unmarshal(data, &dataToIntegrityProtectBlockBeforePatch)
+					object, payload := generaterawJSONWebSignature(rsp.ModificationsBlock[0])
+					n32fContextId := dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
+					var modifications models.Modifications
+					if err := json.Unmarshal(payload, &modifications); err != nil {
+						logger.Messageforward.Errorln("unmarshal error", err)
+						var problemDetails models.ProblemDetails
+						problemDetails.Cause = "unmarshal error"
+						problemDetails.Status = http.StatusBadRequest
+						// TODO return error
+						rspBody, _ := json.Marshal(problemDetails)
+						rspWriter.WriteHeader(http.StatusBadRequest)
+						rspWriter.Write(rspBody)
+					}
+					self := sepp_context.GetSelf()
+					fmt.Println(n32fContextId)
+					if problem := verifyJSONWebSignature(object, self.N32fContextPool[n32fContextId].SecContext.IPXSecInfo[0], modifications.Identity); problem != nil {
+						rspBody, _ := json.Marshal(problem)
+						rspWriter.WriteHeader(http.StatusBadRequest)
+						rspWriter.Write(rspBody)
+					}
+					if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications, ieList); problem != nil {
+						rspBody, _ := json.Marshal(problem)
+						rspWriter.WriteHeader(http.StatusBadRequest)
+						rspWriter.Write(rspBody)
+					} else {
+						dataToIntegrityProtectBlockBeforePatch = *dataToIntegrityProtectBlock
+					}
+
+					object, payload = generaterawJSONWebSignature(rsp.ModificationsBlock[1])
+					n32fContextId = dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
+					if err := json.Unmarshal(payload, &modifications); err != nil {
+						logger.Messageforward.Errorln("unmarshal error", err)
+						var problemDetails models.ProblemDetails
+						problemDetails.Cause = "unmarshal error"
+						problemDetails.Status = http.StatusBadRequest
+						// TODO return error
+						rspBody, _ := json.Marshal(problemDetails)
+						rspWriter.WriteHeader(http.StatusBadRequest)
+						rspWriter.Write(rspBody)
+					}
+					if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications.Identity); problem != nil {
+						rspBody, _ := json.Marshal(problem)
+						rspWriter.WriteHeader(http.StatusBadRequest)
+						rspWriter.Write(rspBody)
+					}
+					var aad []byte
+					if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications, ieList); problem != nil {
+						rspBody, _ := json.Marshal(problem)
+						rspWriter.WriteHeader(http.StatusBadRequest)
+						rspWriter.Write(rspBody)
+					} else {
+						aad, _ = json.Marshal(dataToIntegrityProtectBlock)
+					}
+					rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: aad}
+				} else {
+					rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: data}
+				}
 			}
 			if data, err := base64.RawURLEncoding.DecodeString(flatJweJson.Ciphertext); err != nil {
 				logger.Messageforward.Errorln("Decode flatJweJson.Ciphertext error:", err)
@@ -452,4 +515,263 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			return
 		}
 	}
+}
+
+func BuildPublicKey(publicKeyStr string) (pubKey *ecdsa.PublicKey, e error) {
+	bytes, e := base64.StdEncoding.DecodeString(publicKeyStr)
+	if e != nil {
+		return nil, e
+	}
+	split := strings.Split(string(bytes), "+")
+	xStr := split[0]
+	yStr := split[1]
+	x := new(big.Int)
+	y := new(big.Int)
+	e = x.UnmarshalText([]byte(xStr))
+	if e != nil {
+		return nil, e
+	}
+	e = y.UnmarshalText([]byte(yStr))
+	if e != nil {
+		return nil, e
+	}
+	pub := ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}
+	pubKey = &pub
+	return
+}
+
+func generaterawJSONWebSignature(flatJwsJson models.FlatJwsJson) (jose.JSONWebSignature, []byte) {
+	var rawHeader jose.RawHeader
+	var rawJSONWebSignature jose.RawJSONWebSignature
+	for headerKey, rawMessage := range flatJwsJson.Header {
+		switch value := rawMessage.(type) {
+		case nil:
+
+		case *json.RawMessage:
+			rawHeader[jose.HeaderKey(headerKey)] = value
+
+		case []byte:
+			rawHeader[jose.HeaderKey(headerKey)] = (*json.RawMessage)(&value)
+		}
+	}
+	rawJSONWebSignature.Header = &rawHeader
+	payload, _ := base64.RawURLEncoding.DecodeString(flatJwsJson.Payload)
+	rawJSONWebSignature.Payload = &jose.ByteBuffer{Data: payload}
+	data, _ := base64.RawURLEncoding.DecodeString(flatJwsJson.Protected)
+	rawJSONWebSignature.Protected = &jose.ByteBuffer{Data: data}
+	data, _ = base64.RawURLEncoding.DecodeString(flatJwsJson.Signature)
+	rawJSONWebSignature.Signature = &jose.ByteBuffer{Data: data}
+	object, _ := rawJSONWebSignature.Sanitized()
+	return *object, payload
+}
+
+func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfo models.IpxProviderSecInfo, ipxId sepp_context.FQDN) *models.ProblemDetails {
+	if ipxId != iPXSecInfo.IpxProviderId {
+		logger.Messageforward.Errorln("IPX not authorized", ipxId, iPXSecInfo.IpxProviderId)
+		var problemDetails models.ProblemDetails
+		problemDetails.Cause = "IPX not authorized"
+		problemDetails.Status = http.StatusBadRequest
+		// TODO return error
+		return &problemDetails
+	}
+	var publicKey *ecdsa.PublicKey
+	if temp, err := BuildPublicKey(iPXSecInfo.RawPublicKeyList[0]); err != nil {
+		logger.Messageforward.Errorln("public error")
+		var problemDetails models.ProblemDetails
+		problemDetails.Cause = "public error"
+		problemDetails.Status = http.StatusBadRequest
+		// TODO return error
+		return &problemDetails
+	} else {
+		publicKey = temp
+	}
+	if _, err := object.Verify(publicKey); err != nil {
+		logger.Messageforward.Errorln("verify error")
+		var problemDetails models.ProblemDetails
+		problemDetails.Cause = "verify error"
+		problemDetails.Status = http.StatusBadRequest
+		// TODO return error
+		return &problemDetails
+	}
+	return nil
+}
+
+func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modifications models.Modifications, ieList []models.IeInfo) (*models.DataToIntegrityProtectBlock, *models.ProblemDetails) {
+	// self := sepp_context.GetSelf()
+	for _, value := range modifications.Operations {
+		var ieInfo *models.IeInfo
+		for _, tempIeInfo := range ieList {
+			if tempIeInfo.ReqIe == value.Path {
+				ieInfo = &tempIeInfo
+				break
+			}
+		}
+		if ieInfo == nil {
+			logger.Messageforward.Errorln("modification not allowed", value)
+			var problemDetails models.ProblemDetails
+			problemDetails.Cause = "modification not allowed"
+			problemDetails.Status = http.StatusBadRequest
+			// TODO return error
+			return nil, &problemDetails
+		}
+		switch value.Op {
+		case models.PatchOperation_ADD:
+			switch ieInfo.IeLoc {
+			case models.IeLocation_HEADER:
+				sourceJson.Headers = append(sourceJson.Headers, models.HttpHeader{Header: value.Path, Value: &models.EncodedHttpHeaderValue{Value: value.Value.(string)}})
+			case models.IeLocation_BODY:
+				sourceJson.Payload = append(sourceJson.Payload, models.HttpPayload{IePath: value.Path, IeValueLocation: models.IeLocation_BODY, Value: value.Value.(map[string]interface{})})
+			case models.IeLocation_URI_PARAM:
+				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				queryParams.Add(value.Path, value.Value.(string))
+				sourceJson.RequestLine.QueryFragment = queryParams.Encode()
+			}
+		case models.PatchOperation_COPY:
+			switch ieInfo.IeLoc {
+			case models.IeLocation_HEADER:
+				var targetHeader models.HttpHeader
+				for _, header := range sourceJson.Headers {
+					if header.Header == value.From {
+						targetHeader = header
+						break
+					}
+				}
+				targetHeader.Header = value.Path
+				sourceJson.Headers = append(sourceJson.Headers, targetHeader)
+			case models.IeLocation_BODY:
+				var targetPayload models.HttpPayload
+				for _, payload := range sourceJson.Payload {
+					if payload.IePath == value.From {
+						targetPayload = payload
+						break
+					}
+				}
+				sourceJson.Payload = append(sourceJson.Payload, models.HttpPayload{IePath: value.Path, IeValueLocation: models.IeLocation_BODY, Value: targetPayload.Value})
+			case models.IeLocation_URI_PARAM:
+				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				paramBody := queryParams.Get(value.From)
+				queryParams.Add(value.Path, paramBody)
+			}
+		case models.PatchOperation_MOVE:
+			switch ieInfo.IeLoc {
+			case models.IeLocation_HEADER:
+				var headerIdx int
+				for idx, header := range sourceJson.Headers {
+					if header.Header == value.From {
+						headerIdx = idx
+						break
+					}
+				}
+				sourceJson.Headers[headerIdx].Header = value.Path
+			case models.IeLocation_BODY:
+				var payloadIdx int
+				for idx, payload := range sourceJson.Payload {
+					if payload.IePath == value.From {
+						payloadIdx = idx
+						break
+					}
+				}
+				sourceJson.Payload[payloadIdx].IePath = value.Path
+			case models.IeLocation_URI_PARAM:
+				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				paramBody := queryParams.Get(value.From)
+				queryParams.Del(value.From)
+				queryParams.Add(value.Path, paramBody)
+			}
+		case models.PatchOperation_REMOVE:
+			switch ieInfo.IeLoc {
+			case models.IeLocation_HEADER:
+				var headerIdx int
+				for idx, header := range sourceJson.Headers {
+					if header.Header == value.Path {
+						headerIdx = idx
+						break
+					}
+				}
+				sourceJson.Headers = append(sourceJson.Headers[:headerIdx], sourceJson.Headers[headerIdx+1:]...)
+			case models.IeLocation_BODY:
+				var payloadIdx int
+				for idx, payload := range sourceJson.Payload {
+					if payload.IePath == value.Path {
+						payloadIdx = idx
+						break
+					}
+				}
+				sourceJson.Payload = append(sourceJson.Payload[:payloadIdx], sourceJson.Payload[payloadIdx+1:]...)
+			case models.IeLocation_URI_PARAM:
+				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				queryParams.Del(value.Path)
+			}
+		case models.PatchOperation_REPLACE:
+			switch ieInfo.IeLoc {
+			case models.IeLocation_HEADER:
+				var headerIdx int
+				for idx, header := range sourceJson.Headers {
+					if header.Header == value.From {
+						headerIdx = idx
+						break
+					}
+				}
+				sourceJson.Headers[headerIdx].Value.Value = value.Value.(string)
+			case models.IeLocation_BODY:
+				var payloadIdx int
+				for idx, payload := range sourceJson.Payload {
+					if payload.IePath == value.From {
+						payloadIdx = idx
+						break
+					}
+				}
+				sourceJson.Payload[payloadIdx].Value = value.Value.(map[string]interface{})
+			case models.IeLocation_URI_PARAM:
+				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				queryParams.Set(value.Path, value.Value.(string))
+			}
+		case models.PatchOperation_TEST:
+			switch ieInfo.IeLoc {
+			case models.IeLocation_HEADER:
+				var headerIdx int
+				for idx, header := range sourceJson.Headers {
+					if header.Header == value.Path {
+						headerIdx = idx
+						break
+					}
+				}
+				if sourceJson.Headers[headerIdx].Value.Value != value.Value {
+					logger.Messageforward.Errorln("JSON patch test failed", value)
+					var problemDetails models.ProblemDetails
+					problemDetails.Cause = "JSON patch test failed"
+					problemDetails.Status = http.StatusBadRequest
+					// TODO return error
+					return nil, &problemDetails
+				}
+			case models.IeLocation_BODY:
+				var payloadIdx int
+				for idx, payload := range sourceJson.Payload {
+					if payload.IePath == value.Path {
+						payloadIdx = idx
+						break
+					}
+				}
+				if !reflect.DeepEqual(sourceJson.Payload[payloadIdx].Value, value.Value.(map[string]interface{})) {
+					logger.Messageforward.Errorln("JSON patch test failed", value)
+					var problemDetails models.ProblemDetails
+					problemDetails.Cause = "JSON patch test failed"
+					problemDetails.Status = http.StatusBadRequest
+					// TODO return error
+					return nil, &problemDetails
+				}
+			case models.IeLocation_URI_PARAM:
+				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				if value.Value != queryParams.Get(value.Path) {
+					logger.Messageforward.Errorln("JSON patch test failed", value)
+					var problemDetails models.ProblemDetails
+					problemDetails.Cause = "JSON patch test failed"
+					problemDetails.Status = http.StatusBadRequest
+					// TODO return error
+					return nil, &problemDetails
+				}
+			}
+		}
+	}
+	return &sourceJson, nil
 }

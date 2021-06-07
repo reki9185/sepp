@@ -61,7 +61,7 @@ func ExchangeCiphersuite(seppUri string, fqdn string) {
 			conText := []byte("")
 			masterKey, _ := res.TLS.ExportKeyingMaterial("EXPORTER_3GPP_N32_MASTER", conText, 64)
 			hash := sha256.New
-			info := []byte("N32" + rsp.N32fContextId + "parallel_request_key")
+			info := []byte("N32" + secParamExchReqData.N32fContextId + "parallel_request_key")
 			expandHkdf := hkdf.Expand(hash, masterKey, info)
 			sendReqKey := make([]byte, keyLen)
 			if _, err := io.ReadFull(expandHkdf, sendReqKey); err != nil {
@@ -69,7 +69,7 @@ func ExchangeCiphersuite(seppUri string, fqdn string) {
 			}
 			secContext.SessionKeys.SendReqKey = sendReqKey
 			hash = sha256.New
-			info = []byte("N32" + rsp.N32fContextId + "parallel_response_key")
+			info = []byte("N32" + secParamExchReqData.N32fContextId + "parallel_response_key")
 			expandHkdf = hkdf.Expand(hash, masterKey, info)
 			sendRspKey := make([]byte, keyLen)
 			if _, err := io.ReadFull(expandHkdf, sendRspKey); err != nil {
@@ -94,7 +94,7 @@ func ExchangeCiphersuite(seppUri string, fqdn string) {
 				panic(err)
 			}
 			hash = sha256.New
-			info = []byte("N32" + rsp.N32fContextId + "parallel_request_iv_salt")
+			info = []byte("N32" + secParamExchReqData.N32fContextId + "parallel_request_iv_salt")
 
 			expandHkdf = hkdf.Expand(hash, masterKey, info)
 			sendReqIv := make([]byte, 8)
@@ -104,7 +104,7 @@ func ExchangeCiphersuite(seppUri string, fqdn string) {
 			secContext.IVs.SendReqIV = sendReqIv
 			secContext.IVs.RecvReqSeq = 0
 			hash = sha256.New
-			info = []byte("N32" + rsp.N32fContextId + "parallel_response_iv_salt")
+			info = []byte("N32" + secParamExchReqData.N32fContextId + "parallel_response_iv_salt")
 
 			expandHkdf = hkdf.Expand(hash, masterKey, info)
 			sendRspIv := make([]byte, 8)
