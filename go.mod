@@ -40,7 +40,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-replace github.com/yangalan0903/openapi => /home/alan/files/thesis/openapi
+replace github.com/yangalan0903/openapi => /home/alan/thesis/openapi
 
 replace github.com/yangalan0903/sepp/jsonhandler => /home/alan/files/thesis/free5gc/NFs/sepp/jsonhandler
 

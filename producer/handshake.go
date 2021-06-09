@@ -105,10 +105,10 @@ func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData)
 	for _, secCap := range supportedSecCapabilityList {
 		if secCap == models.SecurityCapability_PRINS {
 			securityCapability = secCap
-			break
+			// break
 		} else if secCap == models.SecurityCapability_TLS {
 			securityCapability = secCap
-			// break
+			break
 		}
 	}
 	if securityCapability == "" {
@@ -254,7 +254,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		}
 
 		hash = sha256.New
-		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_request_key")
+		info = []byte("N32" + secInfo.N32fContexId + "reverse_request_key")
 
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
 		sendReqKey := make([]byte, keyLen)
@@ -262,7 +262,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 			panic(err)
 		}
 		hash = sha256.New
-		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_request_iv_salt")
+		info = []byte("N32" + secInfo.N32fContexId + "reverse_request_iv_salt")
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
 		sendReqIv := make([]byte, 8)
 		if _, err := io.ReadFull(expandHkdf, sendReqIv); err != nil {
@@ -270,7 +270,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		}
 
 		hash = sha256.New
-		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_response_key")
+		info = []byte("N32" + secInfo.N32fContexId + "reverse_response_key")
 
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
 		sendRspKey := make([]byte, keyLen)
@@ -278,7 +278,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 			panic(err)
 		}
 		hash = sha256.New
-		info = []byte("N32" + secParamExchReqData.N32fContextId + "reverse_response_iv_salt")
+		info = []byte("N32" + secInfo.N32fContexId + "reverse_response_iv_salt")
 		expandHkdf = hkdf.Expand(hash, masterKey, info)
 		sendRspIv := make([]byte, 8)
 		if _, err := io.ReadFull(expandHkdf, sendRspIv); err != nil {
