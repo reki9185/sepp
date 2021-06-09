@@ -148,7 +148,23 @@ func BuildIpxProtectionPolice(context *SEPPContext) {
 	ieInfo.IeLoc = models.IeLocation_URI_PARAM
 	ieInfo.IeType = models.IeType_NONSENSITIVE
 	ieInfo.ReqIe = "target-nf-type"
+	ieInfo.IsModifiable = true
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	apiIeMapping.IeList = append(apiIeMapping.IeList,
+		models.IeInfo{
+			IeLoc:        models.IeLocation_BODY,
+			IeType:       models.IeType_NONSENSITIVE,
+			RspIe:        "/nfInstances/[0]/nfServices/[0]/ipEndPoints/[0]/ipv4Address",
+			IsModifiable: true,
+		},
+	)
+	apiIeMapping.IeList = append(apiIeMapping.IeList,
+		models.IeInfo{
+			IeLoc:        models.IeLocation_HEADER,
+			IeType:       models.IeType_NONSENSITIVE,
+			RspIe:        "Content-Type",
+			IsModifiable: true,
+		},
+	)
 	context.IPXProtectionPolicy = append(context.IPXProtectionPolicy, apiIeMapping)
-
 }

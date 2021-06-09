@@ -355,7 +355,14 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						rspWriter.WriteHeader(http.StatusBadRequest)
 						rspWriter.Write(rspBody)
 					}
-					if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications, ieList); problem != nil {
+					var ipxIeList []models.IeInfo
+					for _, value := range self.N32fContextPool[n32fContextId].SecContext.ProtectionPolicy.ApiIeMappingList {
+						if value.ApiSignature.Uri == request.URL.Path && value.ApiMethod == models.HttpMethod(request.Method) {
+							ipxIeList = value.IeList
+							break
+						}
+					}
+					if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications, ipxIeList); problem != nil {
 						rspBody, _ := json.Marshal(problem)
 						rspWriter.WriteHeader(http.StatusBadRequest)
 						rspWriter.Write(rspBody)
@@ -365,7 +372,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 
 					object, payload = generaterawJSONWebSignature(rsp.ModificationsBlock[1])
 					n32fContextId = dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
-					if err := json.Unmarshal(payload, &modifications); err != nil {
+					var modifications2 models.Modifications
+					if err := json.Unmarshal(payload, &modifications2); err != nil {
 						logger.Messageforward.Errorln("unmarshal error", err)
 						var problemDetails models.ProblemDetails
 						problemDetails.Cause = "unmarshal error"
@@ -375,13 +383,20 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						rspWriter.WriteHeader(http.StatusBadRequest)
 						rspWriter.Write(rspBody)
 					}
-					if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications.Identity); problem != nil {
+					if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications2.Identity); problem != nil {
 						rspBody, _ := json.Marshal(problem)
 						rspWriter.WriteHeader(http.StatusBadRequest)
 						rspWriter.Write(rspBody)
 					}
 					var aad []byte
-					if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications, ieList); problem != nil {
+					var localIpxIeList []models.IeInfo
+					for _, value := range self.IPXProtectionPolicy {
+						if value.ApiSignature.Uri == request.URL.Path && value.ApiMethod == models.HttpMethod(request.Method) {
+							localIpxIeList = value.IeList
+							break
+						}
+					}
+					if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications2, localIpxIeList); problem != nil {
 						rspBody, _ := json.Marshal(problem)
 						rspWriter.WriteHeader(http.StatusBadRequest)
 						rspWriter.Write(rspBody)
@@ -595,170 +610,154 @@ func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfo models.IpxP
 func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modifications models.Modifications, ieList []models.IeInfo) (*models.DataToIntegrityProtectBlock, *models.ProblemDetails) {
 	// self := sepp_context.GetSelf()
 	for _, value := range modifications.Operations {
-		var ieInfo *models.IeInfo
-		for _, tempIeInfo := range ieList {
-			if tempIeInfo.ReqIe == value.Path {
-				ieInfo = &tempIeInfo
-				break
-			}
-		}
-		if ieInfo == nil {
-			logger.Messageforward.Errorln("modification not allowed", value)
-			var problemDetails models.ProblemDetails
-			problemDetails.Cause = "modification not allowed"
-			problemDetails.Status = http.StatusBadRequest
-			// TODO return error
-			return nil, &problemDetails
-		}
+		temp := strings.Split(value.Path, "/")
 		switch value.Op {
 		case models.PatchOperation_ADD:
-			switch ieInfo.IeLoc {
-			case models.IeLocation_HEADER:
-				sourceJson.Headers = append(sourceJson.Headers, models.HttpHeader{Header: value.Path, Value: &models.EncodedHttpHeaderValue{Value: value.Value.(string)}})
-			case models.IeLocation_BODY:
-				sourceJson.Payload = append(sourceJson.Payload, models.HttpPayload{IePath: value.Path, IeValueLocation: models.IeLocation_BODY, Value: value.Value.(map[string]interface{})})
-			case models.IeLocation_URI_PARAM:
+			switch temp[0] {
+			case "header":
+				idx, _ := strconv.Atoi(temp[1])
+				headerMap := value.Value.(map[string]interface{})
+				header := models.HttpHeader{
+					Header: headerMap["header"].(string),
+				}
+				temp := headerMap["value"].(map[string]interface{})
+				header.Value = &models.EncodedHttpHeaderValue{
+					Value: temp["value"].(string),
+				}
+				sourceJson.Headers = append(sourceJson.Headers[:idx+1], sourceJson.Headers[idx:]...)
+				sourceJson.Headers[idx] = header
+			case "payload":
+				idx, _ := strconv.Atoi(temp[1])
+				payloadMap := value.Value.(map[string]interface{})
+				payload := models.HttpPayload{
+					IePath:          payloadMap["iePath"].(string),
+					IeValueLocation: models.IeLocation(payloadMap["ieValueLocation"].(string)),
+					Value:           payloadMap["value"].(map[string]interface{}),
+				}
+				sourceJson.Payload = append(sourceJson.Payload[:idx+1], sourceJson.Payload[idx:]...)
+				sourceJson.Payload[idx] = payload
+
+			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
-				queryParams.Add(value.Path, value.Value.(string))
+				queryParams.Add(temp[1], value.Value.(string))
 				sourceJson.RequestLine.QueryFragment = queryParams.Encode()
 			}
 		case models.PatchOperation_COPY:
-			switch ieInfo.IeLoc {
-			case models.IeLocation_HEADER:
-				var targetHeader models.HttpHeader
-				for _, header := range sourceJson.Headers {
-					if header.Header == value.From {
-						targetHeader = header
-						break
-					}
-				}
-				targetHeader.Header = value.Path
-				sourceJson.Headers = append(sourceJson.Headers, targetHeader)
-			case models.IeLocation_BODY:
-				var targetPayload models.HttpPayload
-				for _, payload := range sourceJson.Payload {
-					if payload.IePath == value.From {
-						targetPayload = payload
-						break
-					}
-				}
-				sourceJson.Payload = append(sourceJson.Payload, models.HttpPayload{IePath: value.Path, IeValueLocation: models.IeLocation_BODY, Value: targetPayload.Value})
-			case models.IeLocation_URI_PARAM:
+			switch temp[0] {
+			case "header":
+				idx, _ := strconv.Atoi(temp[1])
+				idxFrom, _ := strconv.Atoi(strings.Split(value.From, "/")[1])
+				sourceHeader := sourceJson.Headers[idxFrom]
+				sourceJson.Headers = append(sourceJson.Headers[:idx+1], sourceJson.Headers[idx:]...)
+				sourceJson.Headers[idx] = sourceHeader
+			case "payload":
+				idx, _ := strconv.Atoi(temp[1])
+				idxFrom, _ := strconv.Atoi(strings.Split(value.From, "/")[1])
+				sourcePayload := sourceJson.Payload[idxFrom]
+				sourceJson.Payload = append(sourceJson.Payload[:idx+1], sourceJson.Payload[idx:]...)
+				sourceJson.Payload[idx] = sourcePayload
+			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
-				paramBody := queryParams.Get(value.From)
-				queryParams.Add(value.Path, paramBody)
+				paramBody := queryParams.Get(strings.Split(value.From, "/")[1])
+				queryParams.Add(temp[1], paramBody)
 			}
 		case models.PatchOperation_MOVE:
-			switch ieInfo.IeLoc {
-			case models.IeLocation_HEADER:
-				var headerIdx int
-				for idx, header := range sourceJson.Headers {
-					if header.Header == value.From {
-						headerIdx = idx
-						break
-					}
-				}
-				sourceJson.Headers[headerIdx].Header = value.Path
-			case models.IeLocation_BODY:
-				var payloadIdx int
-				for idx, payload := range sourceJson.Payload {
-					if payload.IePath == value.From {
-						payloadIdx = idx
-						break
-					}
-				}
-				sourceJson.Payload[payloadIdx].IePath = value.Path
-			case models.IeLocation_URI_PARAM:
-				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
-				paramBody := queryParams.Get(value.From)
-				queryParams.Del(value.From)
-				queryParams.Add(value.Path, paramBody)
+			switch temp[0] {
+			case "header":
+				idx, _ := strconv.Atoi(temp[1])
+				idxFrom, _ := strconv.Atoi(strings.Split(value.From, "/")[1])
+				sourceHeader := sourceJson.Headers[idxFrom]
+				sourceJson.Headers = append(sourceJson.Headers[:idxFrom], sourceJson.Headers[idxFrom+1:]...)
+				sourceJson.Headers = append(sourceJson.Headers[:idx+1], sourceJson.Headers[idx:]...)
+				sourceJson.Headers[idx] = sourceHeader
+			case "payload":
+				idx, _ := strconv.Atoi(temp[1])
+				idxFrom, _ := strconv.Atoi(strings.Split(value.From, "/")[1])
+				sourcePayload := sourceJson.Payload[idxFrom]
+				sourceJson.Payload = append(sourceJson.Payload[:idxFrom], sourceJson.Payload[idxFrom+1:]...)
+				sourceJson.Payload = append(sourceJson.Payload[:idx+1], sourceJson.Payload[idx:]...)
+				sourceJson.Payload[idx] = sourcePayload
+
+			case "URI_PARAM":
 			}
 		case models.PatchOperation_REMOVE:
-			switch ieInfo.IeLoc {
-			case models.IeLocation_HEADER:
-				var headerIdx int
-				for idx, header := range sourceJson.Headers {
-					if header.Header == value.Path {
-						headerIdx = idx
-						break
-					}
-				}
-				sourceJson.Headers = append(sourceJson.Headers[:headerIdx], sourceJson.Headers[headerIdx+1:]...)
-			case models.IeLocation_BODY:
-				var payloadIdx int
-				for idx, payload := range sourceJson.Payload {
-					if payload.IePath == value.Path {
-						payloadIdx = idx
-						break
-					}
-				}
-				sourceJson.Payload = append(sourceJson.Payload[:payloadIdx], sourceJson.Payload[payloadIdx+1:]...)
-			case models.IeLocation_URI_PARAM:
+			switch temp[0] {
+			case "header":
+				idx, _ := strconv.Atoi(temp[1])
+				sourceJson.Headers = append(sourceJson.Headers[:idx], sourceJson.Headers[idx+1:]...)
+			case "payload":
+				idx, _ := strconv.Atoi(temp[1])
+				sourceJson.Payload = append(sourceJson.Payload[:idx], sourceJson.Payload[idx+1:]...)
+			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
-				queryParams.Del(value.Path)
+				queryParams.Del(temp[1])
 			}
 		case models.PatchOperation_REPLACE:
-			switch ieInfo.IeLoc {
-			case models.IeLocation_HEADER:
-				var headerIdx int
-				for idx, header := range sourceJson.Headers {
-					if header.Header == value.From {
-						headerIdx = idx
-						break
-					}
+			switch temp[0] {
+			case "header":
+				idx, _ := strconv.Atoi(temp[1])
+				headerMap := value.Value.(map[string]interface{})
+				header := models.HttpHeader{
+					Header: headerMap["header"].(string),
 				}
-				sourceJson.Headers[headerIdx].Value.Value = value.Value.(string)
-			case models.IeLocation_BODY:
-				var payloadIdx int
-				for idx, payload := range sourceJson.Payload {
-					if payload.IePath == value.From {
-						payloadIdx = idx
-						break
-					}
+				temp := headerMap["value"].(map[string]interface{})
+				header.Value = &models.EncodedHttpHeaderValue{
+					Value: temp["value"].(string),
 				}
-				sourceJson.Payload[payloadIdx].Value = value.Value.(map[string]interface{})
-			case models.IeLocation_URI_PARAM:
+				sourceJson.Headers[idx] = header
+			case "payload":
+				idx, _ := strconv.Atoi(temp[1])
+				payloadMap := value.Value.(map[string]interface{})
+				payload := models.HttpPayload{
+					IePath:          payloadMap["iePath"].(string),
+					IeValueLocation: models.IeLocation(payloadMap["ieValueLocation"].(string)),
+					Value:           payloadMap["value"].(map[string]interface{}),
+				}
+				sourceJson.Payload[idx] = payload
+
+			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
-				queryParams.Set(value.Path, value.Value.(string))
+				queryParams.Set(temp[1], value.Value.(string))
+				sourceJson.RequestLine.QueryFragment = queryParams.Encode()
 			}
 		case models.PatchOperation_TEST:
-			switch ieInfo.IeLoc {
-			case models.IeLocation_HEADER:
-				var headerIdx int
-				for idx, header := range sourceJson.Headers {
-					if header.Header == value.Path {
-						headerIdx = idx
-						break
-					}
+			switch temp[0] {
+			case "header":
+				headerIdx, _ := strconv.Atoi(temp[1])
+				headerMap := value.Value.(map[string]interface{})
+				header := models.HttpHeader{
+					Header: headerMap["header"].(string),
 				}
-				if sourceJson.Headers[headerIdx].Value.Value != value.Value {
-					logger.Messageforward.Errorln("JSON patch test failed", value)
+				header.Value = &models.EncodedHttpHeaderValue{
+					Value: headerMap["value"].(map[string]interface{})["value"].(string),
+				}
+				if !reflect.DeepEqual(sourceJson.Headers[headerIdx], header) {
+					logger.Messageforward.Errorln("JSON patch test failed", header)
 					var problemDetails models.ProblemDetails
 					problemDetails.Cause = "JSON patch test failed"
 					problemDetails.Status = http.StatusBadRequest
 					// TODO return error
 					return nil, &problemDetails
 				}
-			case models.IeLocation_BODY:
-				var payloadIdx int
-				for idx, payload := range sourceJson.Payload {
-					if payload.IePath == value.Path {
-						payloadIdx = idx
-						break
-					}
+			case "payload":
+				idx, _ := strconv.Atoi(temp[1])
+				payloadMap := value.Value.(map[string]interface{})
+				payload := models.HttpPayload{
+					IePath:          payloadMap["iePath"].(string),
+					IeValueLocation: models.IeLocation(payloadMap["ieValueLocation"].(string)),
+					Value:           payloadMap["value"].(map[string]interface{}),
 				}
-				if !reflect.DeepEqual(sourceJson.Payload[payloadIdx].Value, value.Value.(map[string]interface{})) {
-					logger.Messageforward.Errorln("JSON patch test failed", value)
+				if !reflect.DeepEqual(sourceJson.Payload[idx], payload) {
+					logger.Messageforward.Errorln("JSON patch test failed", payload)
 					var problemDetails models.ProblemDetails
 					problemDetails.Cause = "JSON patch test failed"
 					problemDetails.Status = http.StatusBadRequest
 					// TODO return error
 					return nil, &problemDetails
 				}
-			case models.IeLocation_URI_PARAM:
+			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
-				if value.Value != queryParams.Get(value.Path) {
+				if !reflect.DeepEqual(value.Value.(string), queryParams.Get(temp[1])) {
 					logger.Messageforward.Errorln("JSON patch test failed", value)
 					var problemDetails models.ProblemDetails
 					problemDetails.Cause = "JSON patch test failed"
