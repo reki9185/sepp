@@ -105,10 +105,16 @@ func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData)
 	}
 	var secInfo sepp_context.SecInfo
 	secInfo.SecCap = securityCapability
+	if securityCapability == models.SecurityCapability_TLS {
+		secInfo.Var3GppSbiTargetApiRootSupported = secNegotiateReqData.Var3GppSbiTargetApiRootSupported
+	}
 	self.PLMNSecInfo[fqdn] = secInfo
 
 	responseBody.Sender = self.SelfFqdn
 	responseBody.SelectedSecCapability = securityCapability
+	if securityCapability == models.SecurityCapability_TLS {
+		responseBody.Var3GppSbiTargetApiRootSupported = true
+	}
 
 	return &responseBody, nil
 }
