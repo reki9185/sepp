@@ -45,19 +45,14 @@ func AddService(engine *mux.Router) *mux.Router {
 		switch route.Method {
 		case "GET":
 			group.HandleFunc(route.Pattern, route.HandlerFunc).Methods("GET")
-			// group.GET(route.Pattern, route.HandlerFunc)
 		case "POST":
 			group.HandleFunc(route.Pattern, route.HandlerFunc).Methods("POST")
-			// group.POST(route.Pattern, route.HandlerFunc)
 		case "PUT":
 			group.HandleFunc(route.Pattern, route.HandlerFunc).Methods("PUT")
-			// group.PUT(route.Pattern, route.HandlerFunc)
 		case "DELETE":
 			group.HandleFunc(route.Pattern, route.HandlerFunc).Methods("DELETE")
-			// group.DELETE(route.Pattern, route.HandlerFunc)
 		case "PATCH":
 			group.HandleFunc(route.Pattern, route.HandlerFunc).Methods("PATCH")
-			// group.PATCH(route.Pattern, route.HandlerFunc)
 		}
 	}
 	return group
@@ -66,7 +61,6 @@ func AddService(engine *mux.Router) *mux.Router {
 // Index is the index handler.
 func Index(rspWriter http.ResponseWriter, request *http.Request) {
 	rspWriter.Write([]byte("Hello World!"))
-	// c.String(http.StatusOK, "Hello World!")
 }
 
 var routes = Routes{

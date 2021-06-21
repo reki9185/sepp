@@ -1,26 +1,12 @@
 package producer
 
 import (
-	// "context"
-	// "crypto/sha256"
-	// "encoding/base64"
-	// "encoding/hex"
-	// "fmt"
-	// "math/rand"
 	"crypto/sha256"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
 
-	// "strings"
-	// "time"
-
-	// "github.com/bronze1man/radius"
-	// "github.com/google/gopacket"
-	// "github.com/google/gopacket/layers"
-
-	// "github.com/free5gc/UeauCommon"
 	"github.com/free5gc/http_wrapper"
 	"github.com/yangalan0903/openapi/models"
 	sepp_context "github.com/yangalan0903/sepp/context"
@@ -95,7 +81,6 @@ func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData)
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "fqdn is not supported"
 		problemDetails.Status = http.StatusBadRequest
-		// TODO return error
 		return nil, &problemDetails
 	}
 
@@ -121,8 +106,6 @@ func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData)
 	var secInfo sepp_context.SecInfo
 	secInfo.SecCap = securityCapability
 	self.PLMNSecInfo[fqdn] = secInfo
-
-	//TODO verify 3gpp-Sbi-Target-apiRoot HTTP header is supported or not
 
 	responseBody.Sender = self.SelfFqdn
 	responseBody.SelectedSecCapability = securityCapability
@@ -162,7 +145,6 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "fqdn is not supported"
 		problemDetails.Status = http.StatusBadRequest
-		// TODO return error
 		return nil, &problemDetails
 	} else {
 		secInfo = temp
@@ -308,18 +290,6 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		n32fContext, _ := self.N32fContextPool[secInfo.N32fContexId]
 		var ipxSecInfoList []models.IpxProviderSecInfo
 		ipxSecInfoList = append(ipxSecInfoList, secParamExchReqData.IpxProviderSecInfoList...)
-		// ipxSecInfoList.IpxProviderId = secParamExchReqData.IpxProviderSecInfoList[0].IpxProviderId
-		// if rawPublicKeyList := secParamExchReqData.IpxProviderSecInfoList[0].RawPublicKeyList; rawPublicKeyList != nil {
-		// 	ipxSecInfo.RawPublicKeyList = append(ipxSecInfo.RawPublicKeyList, rawPublicKeyList...)
-		// } else if certificateList := secParamExchReqData.IpxProviderSecInfoList[0].CertificateList; certificateList != nil{
-		// 	ipxSecInfo.CertificateList = append(ipxSecInfo.CertificateList, certificateList...)
-		// } else {
-		// 	logger.Handshake.Infof("secParamExchReqData does not contain any IPX Info")
-		// 	var problemDetails models.ProblemDetails
-		// 	problemDetails.Cause = "IE_MISSING"
-		// 	problemDetails.Status = http.StatusBadRequest
-		// 	return nil, &problemDetails
-		// }
 		n32fContext.SecContext.IPXSecInfo = ipxSecInfoList
 		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
 		responseBody.N32fContextId = n32fContext.N32fContextId

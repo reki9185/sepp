@@ -40,7 +40,6 @@ func BuildJsonBody(values []models.HttpPayload, dataToIntegrityProtectAndCipherB
 						if data, exist := encryptedData["bool"]; exist {
 							arrayTravaler[arrayIdx] = data.(bool)
 						}
-						// arrayTravaler[arrayIdx] = value.Value["encBlockIndex"]
 					} else {
 						for _, val := range value.Value {
 							arrayTravaler[arrayIdx] = val
@@ -66,7 +65,6 @@ func BuildJsonBody(values []models.HttpPayload, dataToIntegrityProtectAndCipherB
 					if data, exist := encryptedData["bool"]; exist {
 						travaler[segment] = data.(bool)
 					}
-					// travaler[segment] = value.Value["encBlockIndex"]
 				} else {
 					for _, val := range value.Value {
 						travaler[segment] = val
@@ -147,9 +145,6 @@ func BuildJsonBody(values []models.HttpPayload, dataToIntegrityProtectAndCipherB
 			}
 		}
 	}
-	// buf := &bytes.Buffer{}
-	// je := json.NewEncoder(buf)
-	// je.Encode(obj)
 	jsonObj, _ := json.Marshal(obj)
 	return jsonObj
 }

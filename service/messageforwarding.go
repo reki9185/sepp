@@ -67,7 +67,6 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			logger.Messageforward.Errorf("Encode problemDetail error: %+v", err)
 		}
 		rspWriter.Write(rsp)
-		// ctx.JSON(http.StatusInternalServerError, problemDetail)
 		return
 	}
 	self := sepp_context.GetSelf()
@@ -86,7 +85,6 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			logger.Messageforward.Errorf("Encode problemDetail error: %+v", err)
 		}
 		rspWriter.Write(rsp)
-		// ctx.JSON(http.StatusInternalServerError, problemDetail)
 		return
 	}
 	temp := strings.Split(sbiTargetApiRoot, "://")
@@ -154,7 +152,6 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 		return
 	} else {
 		remoteSeppAddr, exist := self.FqdnIpMap[plmnId]
-
 		if exist == false {
 			problemDetail := models.ProblemDetails{
 				Title:  "Target plmn not support",
@@ -168,41 +165,66 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				logger.Messageforward.Errorf("Encode problemDetail error: %+v", err)
 			}
 			rspWriter.Write(rsp)
-			// ctx.JSON(http.StatusInternalServerError, problemDetail)
 			return
 		}
 		secInfo, _ := self.PLMNSecInfo[plmnId]
-		if secInfo.SecCap == models.SecurityCapability_TLS {
-			logger.Messageforward.Infoln("start tls forwarding procedure")
-
-			newUrl := remoteSeppAddr + request.RequestURI
-			proxyReq, err := http.NewRequest(request.Method, newUrl, bytes.NewReader(requestBody))
-			proxyReq.Header = make(http.Header)
-			for h, val := range request.Header {
-				proxyReq.Header[h] = val
-			}
-
-			rsp, err := innerHTTP2Client.Do(proxyReq)
-			if err != nil {
-				http.Error(rspWriter, err.Error(), http.StatusBadGateway)
+		if secInfo.SecCap == "" {
+			logger.Messageforward.Infoln("Start handshake procedure:", plmnId)
+			ok := consumer.SendExchangeCapability(remoteSeppAddr)
+			if !ok {
+				problemDetail := models.ProblemDetails{
+					Title:  "can't reach remote SEPP",
+					Status: http.StatusForbidden,
+					Cause:  "can't reach remote SEPP",
+				}
+				logger.Messageforward.Errorf("can't reach remote SEPP")
+				rspWriter.WriteHeader(http.StatusForbidden)
+				rsp, err := json.Marshal(problemDetail)
+				if err != nil {
+					logger.Messageforward.Errorf("Encode problemDetail error: %+v", err)
+				}
+				rspWriter.Write(rsp)
 				return
 			}
+			consumer.ExchangeCiphersuite(remoteSeppAddr, plmnId)
+			consumer.ExchangeProtectionPolicy(remoteSeppAddr, plmnId)
+			consumer.ExchangeIPXInfo(remoteSeppAddr, plmnId)
+		}
+		if secInfo.SecCap == models.SecurityCapability_TLS {
+			logger.Messageforward.Infoln("start tls forwarding procedure")
+			if !secInfo.Var3GppSbiTargetApiRootSupported {
+				// TODO unsupport 3GppSbiTargetApiRoot
+			} else {
 
-			defer rsp.Body.Close()
-
-			for k, v := range rsp.Header {
-				for _, vv := range v {
-					rspWriter.Header().Add(k, vv)
+				newUrl := remoteSeppAddr + request.RequestURI
+				proxyReq, err := http.NewRequest(request.Method, newUrl, bytes.NewReader(requestBody))
+				proxyReq.Header = make(http.Header)
+				for h, val := range request.Header {
+					proxyReq.Header[h] = val
 				}
-			}
-			rspWriter.WriteHeader(rsp.StatusCode)
-			result, err := ioutil.ReadAll(rsp.Body)
-			if err != nil {
-				logger.Messageforward.Errorf("read responseBody error:", err)
-			}
-			_, err = rspWriter.Write(result)
-			if err != nil {
-				logger.Messageforward.Errorf("rspWriter error:", err)
+
+				rsp, err := innerHTTP2Client.Do(proxyReq)
+				if err != nil {
+					http.Error(rspWriter, err.Error(), http.StatusBadGateway)
+					return
+				}
+
+				defer rsp.Body.Close()
+
+				for k, v := range rsp.Header {
+					for _, vv := range v {
+						rspWriter.Header().Add(k, vv)
+					}
+				}
+				rspWriter.WriteHeader(rsp.StatusCode)
+				result, err := ioutil.ReadAll(rsp.Body)
+				if err != nil {
+					logger.Messageforward.Errorf("read responseBody error:", err)
+				}
+				_, err = rspWriter.Write(result)
+				if err != nil {
+					logger.Messageforward.Errorf("rspWriter error:", err)
+				}
 			}
 		} else if secInfo.SecCap == models.SecurityCapability_PRINS {
 			var dataToIntegrityProtectBlock models.DataToIntegrityProtectBlock
@@ -321,7 +343,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			logger.Messageforward.Infoln("start send")
 
 			// rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, remoteSeppAddr, jweKey)
-			rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, "https://10.10.0.39:8000/"+remoteSeppAddr[8:], jweKey)
+			seppN32Server := strings.Replace(remoteSeppAddr, "8000", "8001", 1)
+			rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, "http://10.10.0.39:8000/"+seppN32Server[8:], jweKey)
 
 			flatJweJson := rsp.ReformattedData
 			var rawJSONWebEncryption jose.RawJSONWebEncryption
@@ -378,7 +401,6 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						var problemDetails models.ProblemDetails
 						problemDetails.Cause = "unmarshal error"
 						problemDetails.Status = http.StatusBadRequest
-						// TODO return error
 						rspBody, _ := json.Marshal(problemDetails)
 						rspWriter.WriteHeader(http.StatusBadRequest)
 						rspWriter.Write(rspBody)
@@ -475,7 +497,6 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				var problemDetails models.ProblemDetails
 				problemDetails.Cause = "32fContext not found"
 				problemDetails.Status = http.StatusForbidden
-				// TODO return error
 				httpRsp := http_wrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
 				responseBody, err := openapi.Serialize(httpRsp.Body, "application/json")
 				if err != nil {
@@ -491,11 +512,9 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
 					}
 					rspWriter.Write(rsp)
-					// ctx.JSON(http.StatusInternalServerError, problemDetails)
 				} else {
 					rspWriter.Header().Add("Content-Type", "application/json")
 					rspWriter.Write(responseBody)
-					// ctx.Data(rsp.Status, "application/json", responseBody)
 				}
 			}
 			sendRspKey := n32fContext.SecContext.SessionKeys.SendResKey
@@ -582,7 +601,6 @@ func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfo models.IpxP
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "IPX not authorized"
 		problemDetails.Status = http.StatusBadRequest
-		// TODO return error
 		return &problemDetails
 	}
 	var publicKey *ecdsa.PublicKey
@@ -591,7 +609,6 @@ func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfo models.IpxP
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "public error"
 		problemDetails.Status = http.StatusBadRequest
-		// TODO return error
 		return &problemDetails
 	} else {
 		publicKey = temp
@@ -601,14 +618,12 @@ func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfo models.IpxP
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "verify error"
 		problemDetails.Status = http.StatusBadRequest
-		// TODO return error
 		return &problemDetails
 	}
 	return nil
 }
 
 func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modifications models.Modifications, ieList []models.IeInfo) (*models.DataToIntegrityProtectBlock, *models.ProblemDetails) {
-	// self := sepp_context.GetSelf()
 	for _, value := range modifications.Operations {
 		temp := strings.Split(value.Path, "/")
 		switch value.Op {
@@ -736,7 +751,6 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 					var problemDetails models.ProblemDetails
 					problemDetails.Cause = "JSON patch test failed"
 					problemDetails.Status = http.StatusBadRequest
-					// TODO return error
 					return nil, &problemDetails
 				}
 			case "payload":
@@ -752,7 +766,6 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 					var problemDetails models.ProblemDetails
 					problemDetails.Cause = "JSON patch test failed"
 					problemDetails.Status = http.StatusBadRequest
-					// TODO return error
 					return nil, &problemDetails
 				}
 			case "URI_PARAM":
@@ -762,7 +775,6 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 					var problemDetails models.ProblemDetails
 					problemDetails.Cause = "JSON patch test failed"
 					problemDetails.Status = http.StatusBadRequest
-					// TODO return error
 					return nil, &problemDetails
 				}
 			}

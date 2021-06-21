@@ -16,7 +16,6 @@ import (
 	"github.com/yangalan0903/sepp/logger_util"
 	"github.com/yangalan0903/sepp/util"
 
-	// "github.com/free5gc/logger_util"
 	"github.com/free5gc/path_util"
 	pathUtilLogger "github.com/free5gc/path_util/logger"
 	openApiLogger "github.com/yangalan0903/openapi/logger"
@@ -161,7 +160,8 @@ func (sepp *SEPP) Start() {
 
 	router := logger_util.NewMuxWithLogrus(logger.GinLog)
 	handshake.AddService(router)
-	JOSEProtectedMessageForwarding.AddService(router)
+	n32fRouter := logger_util.NewMuxWithLogrus(logger.GinLog)
+	JOSEProtectedMessageForwarding.AddService(n32fRouter)
 	TelescopicFqdnMapping.AddService(router)
 	router.PathPrefix("/").HandlerFunc(HandleMessageForwarding)
 
@@ -200,7 +200,11 @@ func (sepp *SEPP) Start() {
 		initLog.Warnf("Initialize HTTP server: +%v", err)
 	}
 	for fqdn, ipAddr := range self.FqdnIpMap {
-		consumer.SendExchangeCapability(ipAddr)
+		ok := consumer.SendExchangeCapability(ipAddr)
+		if !ok {
+			initLog.Infoln("exchange capability fail")
+			continue
+		}
 		initLog.Infoln("finish exchange capability")
 		consumer.ExchangeCiphersuite(ipAddr, fqdn)
 		initLog.Infoln("finish ciphersuit exchange: %s", self.N32fContextPool)
@@ -210,6 +214,18 @@ func (sepp *SEPP) Start() {
 		initLog.Infoln("finish IPX Info exchange: %s", self.N32fContextPool)
 	}
 
+	go func() {
+		n32fAddr := fmt.Sprintf("%s:%d", self.BindingIPv4, 8001)
+		n32fServer, err := http2_util.NewServer(n32fAddr, seppLogPath, n32fRouter)
+		if n32fServer == nil {
+			initLog.Errorf("Initialize HTTP server failed: %+v", err)
+			return
+		}
+		if err != nil {
+			initLog.Warnf("Initialize HTTP server: +%v", err)
+		}
+		err = n32fServer.ListenAndServe()
+	}()
 	serverScheme := factory.SeppConfig.Configuration.Sbi.Scheme
 	if serverScheme == "http" {
 		err = server.ListenAndServe()
@@ -271,12 +287,12 @@ func (sepp *SEPP) Terminate() {
 	logger.InitLog.Infof("Terminating SEPP...")
 	// send N32fContextTerminate
 	self := sepp_context.GetSelf()
-	for key, secInfo := range self.PLMNSecInfo {
-		logger.InitLog.Infof("Deregister remote SEPP: ", key)
+	for _, secInfo := range self.N32fContextPool {
+		logger.InitLog.Infof("Deregister remote SEPP: ", secInfo.PeerInformation.RemotePlmnId)
 		n32fContextInfo := models.N32fContextInfo{
-			N32fContextId: self.N32fContextPool[secInfo.N32fContexId].N32fContextId,
+			N32fContextId: secInfo.N32fContextId,
 		}
-		consumer.SendN32fContextTerminate(self.FqdnIpMap[key], key, n32fContextInfo)
+		consumer.SendN32fContextTerminate(self.FqdnIpMap[secInfo.PeerInformation.RemotePlmnId], secInfo.PeerInformation.RemotePlmnId, n32fContextInfo)
 	}
 	// deregister with NRF
 	problemDetails, err := consumer.SendDeregisterNFInstance()

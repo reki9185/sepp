@@ -31,7 +31,6 @@ func ExchangeCiphersuite(seppUri string, fqdn string) {
 	for {
 		rsp, resTmp, err := client.ParameterExchangeApi.PostExchangeParams(context.TODO(), secParamExchReqData)
 		if err != nil || resTmp == nil {
-			//TODO : add log
 			fmt.Println(fmt.Errorf("SEPP connect to remote sepp Error[%v]", err))
 			time.Sleep(2 * time.Second)
 			continue
@@ -161,7 +160,6 @@ func ExchangeProtectionPolicy(seppUri string, fqdn string) {
 	for {
 		rsp, resTmp, err := client.ParameterExchangeApi.PostExchangeParams(context.TODO(), secParamExchReqData)
 		if err != nil || resTmp == nil {
-			//TODO : add log
 			fmt.Println(fmt.Errorf("SEPP connect to remote sepp Error[%v]", err))
 			time.Sleep(2 * time.Second)
 			continue
@@ -196,7 +194,6 @@ func ExchangeIPXInfo(seppUri string, fqdn string) {
 	for {
 		rsp, resTmp, err := client.ParameterExchangeApi.PostExchangeParams(context.TODO(), secParamExchReqData)
 		if err != nil || resTmp == nil {
-			//TODO : add log
 			fmt.Println(fmt.Errorf("SEPP connect to remote sepp Error[%v]", err))
 			time.Sleep(2 * time.Second)
 			continue

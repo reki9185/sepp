@@ -8,31 +8,26 @@ import (
 
 	"github.com/yangalan0903/openapi/N32_Handshake"
 	"github.com/yangalan0903/openapi/models"
-	sepp_context "github.com/yangalan0903/sepp/context"
 )
 
-func SendN32fContextTerminate(seppUri string, fqdn sepp_context.FQDN, n32fContextInfo models.N32fContextInfo) {
+func SendN32fErrorReport(seppUri string, n32fErrorInfo models.N32fErrorInfo) {
 	configuration := N32_Handshake.NewConfiguration()
 	configuration.SetBasePath(seppUri)
 	client := N32_Handshake.NewAPIClient(configuration)
 
 	var res *http.Response
-	i := 0
-	for i < 2 {
-		rsp, resTmp, err := client.N32FContextTerminateApi.PostN32fTerminate(context.TODO(), n32fContextInfo)
-		if err != nil || resTmp == nil {
+	for {
+
+		rsp, err := client.N32FErrorReportApi.PostN32fError(context.TODO(), n32fErrorInfo)
+		if err != nil {
 			fmt.Println(fmt.Errorf("SEPP connect to remote sepp Error[%v]", err))
 			time.Sleep(2 * time.Second)
-			i++
 			continue
 		} else {
-			res = resTmp
+			res = rsp
 		}
 		status := res.StatusCode
-		if status == http.StatusOK {
-			self := sepp_context.GetSelf()
-			delete(self.PLMNSecInfo, fqdn)
-			delete(self.N32fContextPool, rsp.N32fContextId)
+		if status == http.StatusNoContent {
 			break
 		} else {
 			fmt.Println(fmt.Errorf("handler returned wrong status code %d", status))

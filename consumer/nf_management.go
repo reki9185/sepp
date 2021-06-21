@@ -34,7 +34,6 @@ func SendRegisterNFInstance(nrfUri, nfInstanceId string, profile models.NfProfil
 	for {
 		if _, resTmp, err := client.NFInstanceIDDocumentApi.RegisterNFInstance(context.TODO(), nfInstanceId,
 			profile); err != nil || resTmp == nil {
-			//TODO : add log
 			fmt.Println(fmt.Errorf("SEPP register to NRF Error[%v]", err))
 			time.Sleep(2 * time.Second)
 			continue

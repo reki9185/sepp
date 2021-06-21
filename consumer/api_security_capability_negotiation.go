@@ -3,7 +3,7 @@ package consumer
 import (
 	"context"
 	"fmt"
-	"net/http" //"net/http"
+	"net/http"
 	"time"
 
 	"github.com/yangalan0903/openapi/N32_Handshake"
@@ -11,7 +11,7 @@ import (
 	sepp_context "github.com/yangalan0903/sepp/context"
 )
 
-func SendExchangeCapability(seppUri string) {
+func SendExchangeCapability(seppUri string) bool {
 	configuration := N32_Handshake.NewConfiguration()
 	configuration.SetBasePath(seppUri)
 	client := N32_Handshake.NewAPIClient(configuration)
@@ -23,13 +23,13 @@ func SendExchangeCapability(seppUri string) {
 	secNegotiateReqData.Var3GppSbiTargetApiRootSupported = true
 
 	var res *http.Response
-	for {
-
+	i := 0
+	for i < 2 {
 		rsp, resTmp, err := client.SecurityCapabilityNegotiationApi.PostExchangeCapability(context.TODO(), secNegotiateReqData)
 		if err != nil || resTmp == nil {
-			//TODO : add log
 			fmt.Println(fmt.Errorf("SEPP connect to remote sepp Error[%v]", err))
-			time.Sleep(10 * time.Second)
+			time.Sleep(2 * time.Second)
+			i++
 			continue
 		} else {
 			res = resTmp
@@ -41,10 +41,11 @@ func SendExchangeCapability(seppUri string) {
 			secInfo.SecCap = rsp.SelectedSecCapability
 			secInfo.Var3GppSbiTargetApiRootSupported = rsp.Var3GppSbiTargetApiRootSupported
 			self.PLMNSecInfo[rsp.Sender] = secInfo
-			break
+			return true
 		} else {
 			fmt.Println(fmt.Errorf("handler returned wrong status code %d", status))
 			fmt.Println(fmt.Errorf("remote sepp return wrong status code %d", status))
 		}
 	}
+	return false
 }

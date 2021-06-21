@@ -18,6 +18,7 @@ import (
 
 	"github.com/free5gc/http_wrapper"
 	"github.com/yangalan0903/openapi/models"
+	"github.com/yangalan0903/sepp/consumer"
 	sepp_context "github.com/yangalan0903/sepp/context"
 	"github.com/yangalan0903/sepp/jose"
 	"github.com/yangalan0903/sepp/jose/json"
@@ -198,13 +199,20 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "32fContext not found"
 		problemDetails.Status = http.StatusBadRequest
-		// TODO return error
 		return nil, &problemDetails
 	}
 	recvReqKey := n32fContext.SecContext.SessionKeys.RecvReqKey
 	decrypted, err := jSONWebEncryption.Decrypt(recvReqKey)
 	if err != nil {
 		logger.N32fForward.Errorln("JWE decrypt error", err)
+		consumer.SendN32fErrorReport(n32fContext.PeerInformation.RemoteSeppAddress, models.N32fErrorInfo{
+			N32fMessageId: dataToIntegrityProtectBlock.MetaData.MessageId,
+			N32fErrorType: models.N32fErrorType_DECIPHERING_FAILED,
+		})
+		var problemDetails models.ProblemDetails
+		problemDetails.Cause = "JWE decrypt error"
+		problemDetails.Status = http.StatusBadRequest
+		return nil, &problemDetails
 	}
 	if err := json.Unmarshal(decrypted, &dataToIntegrityProtectAndCipherBlock); err != nil {
 		logger.N32fForward.Errorln("json unmarshal error", err)

@@ -42,7 +42,6 @@ func PostExchangeParams(rspWriter http.ResponseWriter, request *http.Request) {
 			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
 		}
 		rspWriter.Write(rsp)
-		// ctx.JSON(http.StatusInternalServerError, problemDetail)
 		return
 	}
 
@@ -61,7 +60,6 @@ func PostExchangeParams(rspWriter http.ResponseWriter, request *http.Request) {
 			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
 		}
 		rspWriter.Write(rsp)
-		// ctx.JSON(http.StatusBadRequest, rsp)
 		return
 	}
 
@@ -83,11 +81,9 @@ func PostExchangeParams(rspWriter http.ResponseWriter, request *http.Request) {
 			logger.Handshake.Errorf("Encode problemDetail error: %+v", err)
 		}
 		rspWriter.Write(rsp)
-		// ctx.JSON(http.StatusInternalServerError, problemDetails)
 	} else {
 		rspWriter.Header().Add("Content-Type", "application/json")
 		rspWriter.WriteHeader(rsp.Status)
 		rspWriter.Write(responseBody)
-		// ctx.Data(rsp.Status, "application/json", responseBody)
 	}
 }
