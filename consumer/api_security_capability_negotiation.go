@@ -11,7 +11,7 @@ import (
 	sepp_context "github.com/yangalan0903/sepp/context"
 )
 
-func SendExchangeCapability(seppUri string) bool {
+func SendExchangeCapability(seppUri string) (*models.SecurityCapability, bool) {
 	configuration := N32_Handshake.NewConfiguration()
 	configuration.SetBasePath(seppUri)
 	client := N32_Handshake.NewAPIClient(configuration)
@@ -41,11 +41,11 @@ func SendExchangeCapability(seppUri string) bool {
 			secInfo.SecCap = rsp.SelectedSecCapability
 			secInfo.Var3GppSbiTargetApiRootSupported = rsp.Var3GppSbiTargetApiRootSupported
 			self.PLMNSecInfo[rsp.Sender] = secInfo
-			return true
+			return &rsp.SelectedSecCapability, true
 		} else {
 			fmt.Println(fmt.Errorf("handler returned wrong status code %d", status))
 			fmt.Println(fmt.Errorf("remote sepp return wrong status code %d", status))
 		}
 	}
-	return false
+	return nil, false
 }

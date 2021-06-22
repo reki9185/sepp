@@ -170,7 +170,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 		secInfo, _ := self.PLMNSecInfo[plmnId]
 		if secInfo.SecCap == "" {
 			logger.Messageforward.Infoln("Start handshake procedure:", plmnId)
-			ok := consumer.SendExchangeCapability(remoteSeppAddr)
+			_, ok := consumer.SendExchangeCapability(remoteSeppAddr)
 			if !ok {
 				problemDetail := models.ProblemDetails{
 					Title:  "can't reach remote SEPP",

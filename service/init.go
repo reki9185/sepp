@@ -200,18 +200,20 @@ func (sepp *SEPP) Start() {
 		initLog.Warnf("Initialize HTTP server: +%v", err)
 	}
 	for fqdn, ipAddr := range self.FqdnIpMap {
-		ok := consumer.SendExchangeCapability(ipAddr)
+		capability, ok := consumer.SendExchangeCapability(ipAddr)
 		if !ok {
 			initLog.Infoln("exchange capability fail")
-			continue
+			return
 		}
-		initLog.Infoln("finish exchange capability")
-		consumer.ExchangeCiphersuite(ipAddr, fqdn)
-		initLog.Infoln("finish ciphersuit exchange: %s", self.N32fContextPool)
-		consumer.ExchangeProtectionPolicy(ipAddr, fqdn)
-		initLog.Infoln("finish protection policy exchange: %s", self.N32fContextPool)
-		consumer.ExchangeIPXInfo(ipAddr, fqdn)
-		initLog.Infoln("finish IPX Info exchange: %s", self.N32fContextPool)
+		if *capability == models.SecurityCapability_PRINS {
+			initLog.Infoln("finish exchange capability")
+			consumer.ExchangeCiphersuite(ipAddr, fqdn)
+			initLog.Infoln("finish ciphersuit exchange: %s", self.N32fContextPool)
+			consumer.ExchangeProtectionPolicy(ipAddr, fqdn)
+			initLog.Infoln("finish protection policy exchange: %s", self.N32fContextPool)
+			consumer.ExchangeIPXInfo(ipAddr, fqdn)
+			initLog.Infoln("finish IPX Info exchange: %s", self.N32fContextPool)
+		}
 	}
 
 	go func() {
