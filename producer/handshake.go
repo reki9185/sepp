@@ -157,7 +157,13 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 	}
 
 	if secInfo.N32fContexId == "" { //for Cipher Suite Negotiation
-		secInfo.N32fContexId = fmt.Sprintf("%x", rand.Uint64())
+		for {
+			n32fContextId := fmt.Sprintf("%x", rand.Uint64())
+			if _, exist := self.N32fContextPool[n32fContextId]; !exist {
+				secInfo.N32fContexId = n32fContextId
+				break
+			}
+		}
 		self.PLMNSecInfo[fqdn] = secInfo
 		var n32fContext sepp_context.N32fContext
 		var cipherSuites sepp_context.CipherSuite
@@ -285,10 +291,10 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		n32fContext.SecContext.IVs.RecvReqSeq = 0
 		n32fContext.SecContext.IVs.RecvResIV = recvRspIv
 		n32fContext.SecContext.IVs.RecvResSeq = 0
-		n32fContext.SecContext.ProtectionPolicy.ApiIeMappingList = secParamExchReqData.ProtectionPolicyInfo.ApiIeMappingList
+		n32fContext.SecContext.ProtectionPolicy = *secParamExchReqData.ProtectionPolicyInfo
 		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
 		responseBody.N32fContextId = n32fContext.N32fContextId
-		responseBody.SelProtectionPolicyInfo = &models.ProtectionPolicy{ApiIeMappingList: self.IPXProtectionPolicy}
+		responseBody.SelProtectionPolicyInfo = &self.LocalProtectionPolicy
 		responseBody.Sender = self.SelfFqdn
 
 		return &responseBody, nil
@@ -299,8 +305,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		n32fContext.SecContext.IPXSecInfo = ipxSecInfoList
 		self.N32fContextPool[secInfo.N32fContexId] = n32fContext
 		responseBody.N32fContextId = n32fContext.N32fContextId
-		responseBody.IpxProviderSecInfoList = append(responseBody.IpxProviderSecInfoList, self.SelfIPXSecInfo)
-		responseBody.SelProtectionPolicyInfo = &self.LocalProtectionPolicy
+		responseBody.IpxProviderSecInfoList = append(responseBody.IpxProviderSecInfoList, self.SelfIPXSecInfo...)
 		responseBody.Sender = self.SelfFqdn
 		logger.Handshake.Infoln("param exchange finish:%s", self.N32fContextPool)
 		return &responseBody, nil

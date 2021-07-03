@@ -39,8 +39,10 @@ func InitSeppContext(context *SEPPContext) {
 		context.PLMNSecInfo[fqdn] = secInfo
 	}
 	sbi := configuration.Sbi
-	context.SelfIPXSecInfo.IpxProviderId = "IPX"
-	context.SelfIPXSecInfo.RawPublicKeyList = append(context.SelfIPXSecInfo.RawPublicKeyList, "ODU4ODU1NTQxMTQ0NTQwMzkzODc1NTQwNTEwNjAzOTQ3MjgwODU2NTExMTc1MjU4OTkwNjQ4MDQyMDIyNzI1MjU3MjMwOTM5NDkyODUrNzUzNzE0Njc4OTEwMjc2MDE2OTc3MTc2NzQwMzQ0MTg0NjUxMzgzMTczMjg3MTY3MjQxODAwNzEzNTU5NTEwODg0NzgyNzY0ODE5NTc=")
+	var ipxProviderSecInfo models.IpxProviderSecInfo
+	ipxProviderSecInfo.IpxProviderId = "IPX"
+	ipxProviderSecInfo.RawPublicKeyList = append(ipxProviderSecInfo.RawPublicKeyList, "ODU4ODU1NTQxMTQ0NTQwMzkzODc1NTQwNTEwNjAzOTQ3MjgwODU2NTExMTc1MjU4OTkwNjQ4MDQyMDIyNzI1MjU3MjMwOTM5NDkyODUrNzUzNzE0Njc4OTEwMjc2MDE2OTc3MTc2NzQwMzQ0MTg0NjUxMzgzMTczMjg3MTY3MjQxODAwNzEzNTU5NTEwODg0NzgyNzY0ODE5NTc=")
+	context.SelfIPXSecInfo = append(context.SelfIPXSecInfo, ipxProviderSecInfo)
 	context.N32fContextPool = make(map[N32fContextId]N32fContext)
 	context.JweCipherSuiteList = append(context.JweCipherSuiteList, "A128GCM", "A256GCM")
 	context.JwsCipherSuiteList = append(context.JwsCipherSuiteList, "ES256")
@@ -90,13 +92,195 @@ func BuildLocalProtectionPolice(context *SEPPContext) {
 	apiSignature.Uri = "/nnrf-disc/v1/nf-instances"
 	apiIeMapping.ApiSignature = apiSignature
 	apiIeMapping.ApiMethod = models.HttpMethod_GET
-	var ieInfo models.IeInfo
-	ieInfo.IeLoc = models.IeLocation_URI_PARAM
-	ieInfo.IeType = models.IeType_UEID
-	ieInfo.ReqIe = "Supi"
+	ieInfo := models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_UEID,
+		ReqIe:  "supi",
+	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "target-nf-type",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "requester-nf-type",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "service-names",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "requester-nf-instance-fqdn",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "target-plmn-list",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "target-nf-instance-id",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "target-nf-fqdn",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "snssais",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "nsi-list",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "dnn",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "smf-serving-area",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "amf-region-id",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_LOCATION,
+		ReqIe:  "tai",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "amf-set-id",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "guami",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "ue-ipv4-address",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "ip-domain",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "ue-ipv6-prefix",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "pgw-ind",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "pgw",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_UEID,
+		ReqIe:  "gpsi",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "external-group-identity",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "data-set",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "routing-indicator",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "group-id-list",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_URI_PARAM,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "access-type",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		RspIe:  "/validityPeriod",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		RspIe:  "/nfInstances/[0]/nfInstanceId",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		RspIe:  "/nfInstances/[0]/nfType",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:        models.IeLocation_BODY,
+		IeType:       models.IeType_NONSENSITIVE,
+		RspIe:        "/nfInstances/[0]/nfStatus",
+		IsModifiable: true,
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+
 	context.LocalProtectionPolicy.ApiIeMappingList = append(context.LocalProtectionPolicy.ApiIeMappingList, apiIeMapping)
-	context.LocalProtectionPolicy.DataTypeEncPolicy = append(context.LocalProtectionPolicy.DataTypeEncPolicy, models.IeType_UEID)
 
 	apiIeMapping = models.ApiIeMapping{}
 	apiSignature = models.ApiSignature{}
@@ -112,7 +296,80 @@ func BuildLocalProtectionPolice(context *SEPPContext) {
 	ieInfo = models.IeInfo{
 		IeLoc:  models.IeLocation_BODY,
 		IeType: models.IeType_AUTHENTICATION_MATERIAL,
+		ReqIe:  "/servingNetworkName/rand",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_AUTHENTICATION_MATERIAL,
+		ReqIe:  "/servingNetworkName/auts",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "/traceData/traceRef",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "/traceData/traceDepth",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "/traceData/neTypeList",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "/traceData/eventList",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "/traceData/collectionEntityIpv4Addr",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "/traceData/collectionEntityIpv6Addr",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		ReqIe:  "/traceData/interfaceList",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		RspIe:  "/authType",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		RspIe:  "/servingNetworkName",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_AUTHENTICATION_MATERIAL,
 		RspIe:  "/5gAuthData",
+	}
+	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
+	ieInfo = models.IeInfo{
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		RspIe:  "/_links/link",
 	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
 	ieInfo = models.IeInfo{
@@ -134,8 +391,13 @@ func BuildLocalProtectionPolice(context *SEPPContext) {
 	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
 	context.LocalProtectionPolicy.ApiIeMappingList = append(context.LocalProtectionPolicy.ApiIeMappingList, apiIeMapping)
-	context.LocalProtectionPolicy.DataTypeEncPolicy = append(context.LocalProtectionPolicy.DataTypeEncPolicy, models.IeType_AUTHENTICATION_MATERIAL)
-
+	context.LocalProtectionPolicy.DataTypeEncPolicy = []models.IeType{
+		models.IeType_AUTHENTICATION_MATERIAL,
+		models.IeType_AUTHORIZATION_TOKEN,
+		models.IeType_KEY_MATERIAL,
+		models.IeType_LOCATION,
+		models.IeType_UEID,
+	}
 }
 
 func BuildIpxProtectionPolice(context *SEPPContext) {

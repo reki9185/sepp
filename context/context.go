@@ -14,7 +14,7 @@ type N32fContextId = string //('^[A-Fa-f0-9]{16}$')
 type SEPPContext struct {
 	SelfFqdn                   FQDN
 	FqdnIpMap                  map[FQDN]IpAddress
-	SelfIPXSecInfo             models.IpxProviderSecInfo
+	SelfIPXSecInfo             []models.IpxProviderSecInfo
 	JweCipherSuiteList         []string
 	JwsCipherSuiteList         []string
 	PLMNSecInfo                map[FQDN]SecInfo
@@ -45,14 +45,12 @@ type N32fPeerInformation struct {
 }
 
 type N32fSecContext struct {
-	SessionKeys             SessionKeyList
-	CipherSuitList          CipherSuite
-	ProtectionPolicy        models.ProtectionPolicy
-	ModificationPolicyIds   string
-	DataTypeEncrypPolicyIds string
-	Counters                string
-	IVs                     IvList
-	IPXSecInfo              []models.IpxProviderSecInfo
+	SessionKeys      SessionKeyList
+	CipherSuitList   CipherSuite
+	ProtectionPolicy models.ProtectionPolicy
+	Counters         string
+	IVs              IvList
+	IPXSecInfo       []models.IpxProviderSecInfo
 }
 
 type IvList struct {

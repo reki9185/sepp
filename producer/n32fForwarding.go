@@ -76,7 +76,7 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 
 	flatJweJson := n32fReformattedReqMsg.ReformattedData
 	var rawJSONWebEncryption jose.RawJSONWebEncryption
-	var dataToIntegrityProtectBlockBeforePatch models.DataToIntegrityProtectBlock
+	// var dataToIntegrityProtectBlockBeforePatch models.DataToIntegrityProtectBlock
 
 	if data, err := base64.RawURLEncoding.DecodeString(flatJweJson.Protected); err != nil {
 		logger.N32fForward.Errorln("flatJweJson.Protected decode error", err)
@@ -86,53 +86,53 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 	if data, err := base64.RawURLEncoding.DecodeString(flatJweJson.Aad); err != nil {
 		logger.N32fForward.Errorln("flatJweJson.Aad decode error", err)
 	} else {
-		if n32fReformattedReqMsg.ModificationsBlock != nil {
-			json.Unmarshal(data, &dataToIntegrityProtectBlockBeforePatch)
-			object, payload := generaterawJSONWebSignature(n32fReformattedReqMsg.ModificationsBlock[0])
-			n32fContextId := dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
-			var modifications models.Modifications
-			if err := json.Unmarshal(payload, &modifications); err != nil {
-				logger.Messageforward.Errorln("unmarshal error", err)
-				var problemDetails models.ProblemDetails
-				problemDetails.Cause = "unmarshal error"
-				problemDetails.Status = http.StatusBadRequest
-				// TODO return error
-				return nil, &problemDetails
-			}
-			self := sepp_context.GetSelf()
-			if problem := verifyJSONWebSignature(object, self.N32fContextPool[n32fContextId].SecContext.IPXSecInfo[0], modifications.Identity); problem != nil {
-				return nil, problem
-			}
-			if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications); problem != nil {
-				return nil, problem
-			} else {
-				dataToIntegrityProtectBlockBeforePatch = *dataToIntegrityProtectBlock
-			}
+		// if n32fReformattedReqMsg.ModificationsBlock != nil {
+		// 	json.Unmarshal(data, &dataToIntegrityProtectBlockBeforePatch)
+		// 	object, payload := generaterawJSONWebSignature(n32fReformattedReqMsg.ModificationsBlock[0])
+		// 	n32fContextId := dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
+		// 	var modifications models.Modifications
+		// 	if err := json.Unmarshal(payload, &modifications); err != nil {
+		// 		logger.Messageforward.Errorln("unmarshal error", err)
+		// 		var problemDetails models.ProblemDetails
+		// 		problemDetails.Cause = "unmarshal error"
+		// 		problemDetails.Status = http.StatusBadRequest
+		// 		// TODO return error
+		// 		return nil, &problemDetails
+		// 	}
+		// 	self := sepp_context.GetSelf()
+		// 	if problem := verifyJSONWebSignature(object, self.N32fContextPool[n32fContextId].SecContext.IPXSecInfo[0], modifications.Identity); problem != nil {
+		// 		return nil, problem
+		// 	}
+		// 	if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications); problem != nil {
+		// 		return nil, problem
+		// 	} else {
+		// 		dataToIntegrityProtectBlockBeforePatch = *dataToIntegrityProtectBlock
+		// 	}
 
-			object, payload = generaterawJSONWebSignature(n32fReformattedReqMsg.ModificationsBlock[1])
-			var modifications2 models.Modifications
-			n32fContextId = dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
-			if err := json.Unmarshal(payload, &modifications2); err != nil {
-				logger.Messageforward.Errorln("unmarshal error", err)
-				var problemDetails models.ProblemDetails
-				problemDetails.Cause = "unmarshal error"
-				problemDetails.Status = http.StatusBadRequest
-				// TODO return error
-				return nil, &problemDetails
-			}
-			if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications2.Identity); problem != nil {
-				return nil, problem
-			}
-			var aad []byte
-			if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications2); problem != nil {
-				return nil, problem
-			} else {
-				aad, _ = json.Marshal(dataToIntegrityProtectBlock)
-			}
-			rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: aad}
-		} else {
-			rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: data}
-		}
+		// 	object, payload = generaterawJSONWebSignature(n32fReformattedReqMsg.ModificationsBlock[1])
+		// 	var modifications2 models.Modifications
+		// 	n32fContextId = dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
+		// 	if err := json.Unmarshal(payload, &modifications2); err != nil {
+		// 		logger.Messageforward.Errorln("unmarshal error", err)
+		// 		var problemDetails models.ProblemDetails
+		// 		problemDetails.Cause = "unmarshal error"
+		// 		problemDetails.Status = http.StatusBadRequest
+		// 		// TODO return error
+		// 		return nil, &problemDetails
+		// 	}
+		// 	if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications2.Identity); problem != nil {
+		// 		return nil, problem
+		// 	}
+		// 	var aad []byte
+		// 	if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications2); problem != nil {
+		// 		return nil, problem
+		// 	} else {
+		// 		aad, _ = json.Marshal(dataToIntegrityProtectBlock)
+		// 	}
+		// 	rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: aad}
+		// } else {
+		rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: data}
+		// }
 	}
 	if data, err := base64.RawURLEncoding.DecodeString(flatJweJson.Ciphertext); err != nil {
 		logger.N32fForward.Errorln("flatJweJson.Ciphertext decode error", err)
@@ -217,7 +217,46 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 	if err := json.Unmarshal(decrypted, &dataToIntegrityProtectAndCipherBlock); err != nil {
 		logger.N32fForward.Errorln("json unmarshal error", err)
 	}
+	if n32fReformattedReqMsg.ModificationsBlock != nil {
+		object, payload := generaterawJSONWebSignature(n32fReformattedReqMsg.ModificationsBlock[0])
+		var modifications models.Modifications
+		if err := json.Unmarshal(payload, &modifications); err != nil {
+			logger.Messageforward.Errorln("unmarshal error", err)
+			var problemDetails models.ProblemDetails
+			problemDetails.Cause = "unmarshal error"
+			problemDetails.Status = http.StatusBadRequest
+			// TODO return error
+			return nil, &problemDetails
+		}
 
+		if problem := verifyJSONWebSignature(object, n32fContext.SecContext.IPXSecInfo, modifications.Identity); problem != nil {
+			return nil, problem
+		}
+		var dataToIntegrityProtectBlockBeforePatch models.DataToIntegrityProtectBlock
+		if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlock, modifications); problem != nil {
+			return nil, problem
+		} else {
+			dataToIntegrityProtectBlockBeforePatch = *dataToIntegrityProtectBlock
+		}
+		object, payload = generaterawJSONWebSignature(n32fReformattedReqMsg.ModificationsBlock[1])
+		if err := json.Unmarshal(payload, &modifications); err != nil {
+			logger.Messageforward.Errorln("unmarshal error", err)
+			var problemDetails models.ProblemDetails
+			problemDetails.Cause = "unmarshal error"
+			problemDetails.Status = http.StatusBadRequest
+			// TODO return error
+			return nil, &problemDetails
+		}
+
+		if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications.Identity); problem != nil {
+			return nil, problem
+		}
+		if dataToIntegrityProtectBlockBeforePatch, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications); problem != nil {
+			return nil, problem
+		} else {
+			dataToIntegrityProtectBlock = *dataToIntegrityProtectBlockBeforePatch
+		}
+	}
 	reqBody := jsonhandler.BuildJsonBody(dataToIntegrityProtectBlock.Payload, dataToIntegrityProtectAndCipherBlock)
 
 	newpath := string(dataToIntegrityProtectBlock.RequestLine.Scheme) + "://" + string(dataToIntegrityProtectBlock.RequestLine.Authority) + string(dataToIntegrityProtectBlock.RequestLine.Path)
@@ -403,59 +442,27 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 		panic(err)
 	}
 	jweString := object.FullSerialize()
-	object, _ = jose.ParseEncrypted(jweString)
+	jweStrings := strings.Split(jweString[1:len(jweString)-1], ",")
 	var rspFlatJweJson models.FlatJweJson
-	rspRawJSONWebEncryption := object.Original
-	if rspRawJSONWebEncryption.Aad != nil {
-		if data, err := rspRawJSONWebEncryption.Aad.MarshalJSON(); err == nil {
-			if err := json.Unmarshal(data, &rspFlatJweJson.Aad); err != nil {
-				logger.N32fForward.Errorln("json unmarshal error", err)
-			}
-		}
-	}
-	if rspRawJSONWebEncryption.Ciphertext != nil {
-		if data, err := rspRawJSONWebEncryption.Ciphertext.MarshalJSON(); err == nil {
-			if err := json.Unmarshal(data, &rspFlatJweJson.Ciphertext); err != nil {
-				logger.N32fForward.Errorln("json unmarshal error", err)
-			}
-		}
-	}
-	if rspRawJSONWebEncryption.Protected != nil {
-		if data, err := rspRawJSONWebEncryption.Protected.MarshalJSON(); err == nil {
-			if err := json.Unmarshal(data, &rspFlatJweJson.Protected); err != nil {
-				logger.N32fForward.Errorln("json unmarshal error", err)
-			}
-		}
-	}
-	if rspRawJSONWebEncryption.EncryptedKey != nil {
-		if data, err := rspRawJSONWebEncryption.EncryptedKey.MarshalJSON(); err == nil {
-			if err := json.Unmarshal(data, &rspFlatJweJson.EncryptedKey); err != nil {
-				logger.N32fForward.Errorln("json unmarshal error", err)
-			}
-		}
-	}
-	if rspRawJSONWebEncryption.Iv != nil {
-		if data, err := rspRawJSONWebEncryption.Iv.MarshalJSON(); err == nil {
-			if err := json.Unmarshal(data, &rspFlatJweJson.Iv); err != nil {
-				logger.N32fForward.Errorln("json unmarshal error", err)
-			}
-		}
-	}
-	if rspRawJSONWebEncryption.Tag != nil {
-		if data, err := rspRawJSONWebEncryption.Tag.MarshalJSON(); err == nil {
-			if err := json.Unmarshal(data, &rspFlatJweJson.Tag); err != nil {
-				logger.N32fForward.Errorln("json unmarshal error", err)
-			}
-		}
-	}
-	if rspRawJSONWebEncryption.Header != nil {
-		for headerKey, rawMessage := range *rspRawJSONWebEncryption.Header {
-			rspFlatJweJson.Header[string(headerKey)] = rawMessage
-		}
-	}
-	if rspRawJSONWebEncryption.Unprotected != nil {
-		for headerKey, rawMessage := range *rspRawJSONWebEncryption.Unprotected {
-			rspFlatJweJson.Unprotected[string(headerKey)] = rawMessage
+	for _, value := range jweStrings {
+		temp := strings.Split(value, ":")
+		switch temp[0][1 : len(temp[0])-1] {
+		case "protected":
+			rspFlatJweJson.Protected = temp[1][1 : len(temp[1])-1]
+		case "unprotected":
+			// TODO
+		case "header":
+			// TODO
+		case "encrypted_key":
+			rspFlatJweJson.EncryptedKey = temp[1][1 : len(temp[1])-1]
+		case "aad":
+			rspFlatJweJson.Aad = temp[1][1 : len(temp[1])-1]
+		case "ciphertext":
+			rspFlatJweJson.Ciphertext = temp[1][1 : len(temp[1])-1]
+		case "iv":
+			rspFlatJweJson.Iv = temp[1][1 : len(temp[1])-1]
+		case "tag":
+			rspFlatJweJson.Tag = temp[1][1 : len(temp[1])-1]
 		}
 	}
 	responseBody.ReformattedData = &rspFlatJweJson
@@ -512,9 +519,16 @@ func generaterawJSONWebSignature(flatJwsJson models.FlatJwsJson) (jose.JSONWebSi
 	return *object, payload
 }
 
-func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfo models.IpxProviderSecInfo, ipxId sepp_context.FQDN) *models.ProblemDetails {
-	if ipxId != iPXSecInfo.IpxProviderId {
-		logger.Messageforward.Errorln("IPX not authorized", ipxId, iPXSecInfo.IpxProviderId)
+func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfos []models.IpxProviderSecInfo, ipxId sepp_context.FQDN) *models.ProblemDetails {
+	var iPXSecInfo *models.IpxProviderSecInfo
+	for _, temp := range iPXSecInfos {
+		if ipxId == iPXSecInfo.IpxProviderId {
+			iPXSecInfo = &temp
+			break
+		}
+	}
+	if iPXSecInfo == nil {
+		logger.Messageforward.Errorln("IPX not authorized")
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "IPX not authorized"
 		problemDetails.Status = http.StatusBadRequest

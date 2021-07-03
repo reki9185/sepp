@@ -22,7 +22,13 @@ func ExchangeCiphersuite(seppUri string, fqdn string) {
 
 	self := sepp_context.GetSelf()
 	var secParamExchReqData models.SecParamExchReqData
-	secParamExchReqData.N32fContextId = fmt.Sprintf("%x", rand.Uint64())
+	for {
+		n32fContextId := fmt.Sprintf("%x", rand.Uint64())
+		if _, exist := self.N32fContextPool[n32fContextId]; !exist {
+			secParamExchReqData.N32fContextId = n32fContextId
+			break
+		}
+	}
 	secParamExchReqData.JweCipherSuiteList = self.JweCipherSuiteList
 	secParamExchReqData.JwsCipherSuiteList = self.JwsCipherSuiteList
 	secParamExchReqData.Sender = self.SelfFqdn
@@ -153,7 +159,7 @@ func ExchangeProtectionPolicy(seppUri string, fqdn string) {
 	self := sepp_context.GetSelf()
 	var secParamExchReqData models.SecParamExchReqData
 	secParamExchReqData.N32fContextId = self.PLMNSecInfo[fqdn].N32fContexId
-	secParamExchReqData.ProtectionPolicyInfo = &models.ProtectionPolicy{ApiIeMappingList: self.IPXProtectionPolicy}
+	secParamExchReqData.ProtectionPolicyInfo = &self.LocalProtectionPolicy
 	secParamExchReqData.Sender = self.SelfFqdn
 
 	var res *http.Response
@@ -187,7 +193,7 @@ func ExchangeIPXInfo(seppUri string, fqdn string) {
 	self := sepp_context.GetSelf()
 	var secParamExchReqData models.SecParamExchReqData
 	secParamExchReqData.N32fContextId = self.PLMNSecInfo[fqdn].N32fContexId
-	secParamExchReqData.IpxProviderSecInfoList = append(secParamExchReqData.IpxProviderSecInfoList, self.SelfIPXSecInfo)
+	secParamExchReqData.IpxProviderSecInfoList = append(secParamExchReqData.IpxProviderSecInfoList, self.SelfIPXSecInfo...)
 	secParamExchReqData.Sender = self.SelfFqdn
 
 	var res *http.Response

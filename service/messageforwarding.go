@@ -33,7 +33,7 @@ import (
 
 var (
 	innerHTTP2Client = &http.Client{
-		Transport: &http2.Transport{
+		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
@@ -193,6 +193,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 		if secInfo.SecCap == models.SecurityCapability_TLS {
 			logger.Messageforward.Infoln("start tls forwarding procedure")
 			if !secInfo.Var3GppSbiTargetApiRootSupported {
+
 				// TODO unsupport 3GppSbiTargetApiRoot
 			} else {
 
@@ -202,13 +203,11 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				for h, val := range request.Header {
 					proxyReq.Header[h] = val
 				}
-
 				rsp, err := innerHTTP2Client.Do(proxyReq)
 				if err != nil {
 					http.Error(rspWriter, err.Error(), http.StatusBadGateway)
 					return
 				}
-
 				defer rsp.Body.Close()
 
 				for k, v := range rsp.Header {
@@ -229,9 +228,10 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 		} else if secInfo.SecCap == models.SecurityCapability_PRINS {
 			var dataToIntegrityProtectBlock models.DataToIntegrityProtectBlock
 			var dataToIntegrityProtectAndCipherBlock models.DataToIntegrityProtectAndCipherBlock
+			n32fContext := self.N32fContextPool[secInfo.N32fContexId]
 			messageId := fmt.Sprintf("%x", rand.Uint64())
 			metaData := models.MetaData{
-				N32fContextId:   self.N32fContextPool[secInfo.N32fContexId].N32fContextId,
+				N32fContextId:   n32fContext.N32fContextId,
 				MessageId:       messageId,
 				AuthorizedIpxId: "NULL",
 			}
@@ -263,7 +263,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 
 			var ieList []models.IeInfo
 
-			for _, value := range self.LocalProtectionPolicy.ApiIeMappingList {
+			for _, value := range n32fContext.SecContext.ProtectionPolicy.ApiIeMappingList {
 				if value.ApiSignature.Uri == request.URL.Path && value.ApiMethod == models.HttpMethod(request.Method) {
 					ieList = value.IeList
 					break
@@ -286,43 +286,56 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				return
 			}
 			idx := 0
+			dataTypeEncPolicy := self.LocalProtectionPolicy.DataTypeEncPolicy
+			if n32fContext.SecContext.ProtectionPolicy.DataTypeEncPolicy != nil {
+				dataTypeEncPolicy = n32fContext.SecContext.ProtectionPolicy.DataTypeEncPolicy
+			}
 			for _, ie := range ieList {
-				switch ie.IeLoc {
-				case models.IeLocation_HEADER:
-					for headerIdx, header := range headers {
-						if header.Header == ie.ReqIe {
-							temp := make(map[string]interface{})
-							temp["string"] = header.Value.Value
-							dataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(dataToIntegrityProtectAndCipherBlock.DataToEncrypt, temp)
-							header.Value.Value = "encBlockIndex/" + string(idx)
-							headers[headerIdx] = header
-							idx++
-						}
+				needToEncrept := false
+				for _, ieType := range dataTypeEncPolicy {
+					if ie.IeType == ieType {
+						needToEncrept = true
+						break
 					}
-				case models.IeLocation_BODY:
-					for payloadIdx, value := range payload {
-						if value.IePath == ie.ReqIe {
-							httpPayload := models.HttpPayload{
-								IePath:          value.IePath,
-								IeValueLocation: value.IeValueLocation,
-								Value:           map[string]interface{}{"encBlockIndex": idx},
+				}
+				if needToEncrept {
+					switch ie.IeLoc {
+					case models.IeLocation_HEADER:
+						for headerIdx, header := range headers {
+							if header.Header == ie.ReqIe {
+								temp := make(map[string]interface{})
+								temp["string"] = header.Value.Value
+								dataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(dataToIntegrityProtectAndCipherBlock.DataToEncrypt, temp)
+								header.Value.Value = "encBlockIndex/" + string(idx)
+								headers[headerIdx] = header
+								idx++
 							}
-							dataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(dataToIntegrityProtectAndCipherBlock.DataToEncrypt, value.Value)
-							payload[payloadIdx] = httpPayload
+						}
+					case models.IeLocation_BODY:
+						for payloadIdx, value := range payload {
+							if value.IePath == ie.ReqIe {
+								httpPayload := models.HttpPayload{
+									IePath:          value.IePath,
+									IeValueLocation: value.IeValueLocation,
+									Value:           map[string]interface{}{"encBlockIndex": idx},
+								}
+								dataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(dataToIntegrityProtectAndCipherBlock.DataToEncrypt, value.Value)
+								payload[payloadIdx] = httpPayload
+								idx++
+							}
+						}
+					case models.IeLocation_URI_PARAM:
+						queryParams, _ := url.ParseQuery(requestLine.QueryFragment)
+						if paramValue := queryParams.Get(ie.ReqIe); paramValue != "" {
+							paramValue := queryParams[ie.ReqIe]
+							dataToEncrypt := map[string]interface{}{
+								"string": paramValue[0],
+							}
+							dataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(dataToIntegrityProtectAndCipherBlock.DataToEncrypt, dataToEncrypt)
+							queryParams[ie.ReqIe] = []string{"encBlockIndex", string(idx)}
+							requestLine.QueryFragment = queryParams.Encode()
 							idx++
 						}
-					}
-				case models.IeLocation_URI_PARAM:
-					queryParams, _ := url.ParseQuery(requestLine.QueryFragment)
-					if paramValue := queryParams.Get(ie.ReqIe); paramValue != "" {
-						paramValue := queryParams[ie.ReqIe]
-						dataToEncrypt := map[string]interface{}{
-							"string": paramValue[0],
-						}
-						dataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(dataToIntegrityProtectAndCipherBlock.DataToEncrypt, dataToEncrypt)
-						queryParams[ie.ReqIe] = []string{"encBlockIndex", string(idx)}
-						requestLine.QueryFragment = queryParams.Encode()
-						idx++
 					}
 				}
 			}
@@ -373,7 +386,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						rspWriter.Write(rspBody)
 					}
 					self := sepp_context.GetSelf()
-					if problem := verifyJSONWebSignature(object, self.N32fContextPool[n32fContextId].SecContext.IPXSecInfo[0], modifications.Identity); problem != nil {
+					if problem := verifyJSONWebSignature(object, self.N32fContextPool[n32fContextId].SecContext.IPXSecInfo, modifications.Identity); problem != nil {
 						rspBody, _ := json.Marshal(problem)
 						rspWriter.WriteHeader(http.StatusBadRequest)
 						rspWriter.Write(rspBody)
@@ -595,12 +608,20 @@ func generaterawJSONWebSignature(flatJwsJson models.FlatJwsJson) (jose.JSONWebSi
 	return *object, payload
 }
 
-func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfo models.IpxProviderSecInfo, ipxId sepp_context.FQDN) *models.ProblemDetails {
-	if ipxId != iPXSecInfo.IpxProviderId {
-		logger.Messageforward.Errorln("IPX not authorized", ipxId, iPXSecInfo.IpxProviderId)
+func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfos []models.IpxProviderSecInfo, ipxId sepp_context.FQDN) *models.ProblemDetails {
+	var iPXSecInfo *models.IpxProviderSecInfo
+	for _, temp := range iPXSecInfos {
+		if ipxId == iPXSecInfo.IpxProviderId {
+			iPXSecInfo = &temp
+			break
+		}
+	}
+	if iPXSecInfo == nil {
+		logger.Messageforward.Errorln("IPX not authorized")
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "IPX not authorized"
 		problemDetails.Status = http.StatusBadRequest
+		// TODO return error
 		return &problemDetails
 	}
 	var publicKey *ecdsa.PublicKey
