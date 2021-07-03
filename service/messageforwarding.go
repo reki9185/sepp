@@ -33,7 +33,7 @@ import (
 
 var (
 	innerHTTP2Client = &http.Client{
-		Transport: &http.Transport{
+		Transport: &http2.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
@@ -611,7 +611,7 @@ func generaterawJSONWebSignature(flatJwsJson models.FlatJwsJson) (jose.JSONWebSi
 func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfos []models.IpxProviderSecInfo, ipxId sepp_context.FQDN) *models.ProblemDetails {
 	var iPXSecInfo *models.IpxProviderSecInfo
 	for _, temp := range iPXSecInfos {
-		if ipxId == iPXSecInfo.IpxProviderId {
+		if ipxId == temp.IpxProviderId {
 			iPXSecInfo = &temp
 			break
 		}

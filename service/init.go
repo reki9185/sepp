@@ -227,7 +227,11 @@ func (sepp *SEPP) Start() {
 			initLog.Warnf("Initialize HTTP server: +%v", err)
 		}
 		err = n32fServer.ListenAndServe()
+		if err != nil {
+			initLog.Warnf("Initialize HTTP server: +%v", err)
+		}
 	}()
+
 	serverScheme := factory.SeppConfig.Configuration.Sbi.Scheme
 	if serverScheme == "http" {
 		err = server.ListenAndServe()

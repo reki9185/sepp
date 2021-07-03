@@ -333,7 +333,7 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 	rspDataToIntegrityProtectBlock.MetaData = &models.MetaData{
 		N32fContextId:   n32fContext.N32fContextId,
 		MessageId:       dataToIntegrityProtectBlock.MetaData.MessageId,
-		AuthorizedIpxId: "NULL",
+		AuthorizedIpxId: "IPX",
 	}
 	temp := strconv.Itoa(response.StatusCode)
 
@@ -360,7 +360,7 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 	payload := jsonhandler.ParseJsonBody(rspBody)
 
 	var ieList []models.IeInfo
-	for _, value := range self.LocalProtectionPolicy.ApiIeMappingList {
+	for _, value := range n32fContext.SecContext.ProtectionPolicy.ApiIeMappingList {
 		if value.ApiSignature.Uri == dataToIntegrityProtectBlock.RequestLine.Path && value.ApiMethod == dataToIntegrityProtectBlock.RequestLine.Method {
 			ieList = value.IeList
 			break
@@ -381,30 +381,43 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 		return nil, &problemDetail
 	}
 	idx := 0
+	dataTypeEncPolicy := self.LocalProtectionPolicy.DataTypeEncPolicy
+	if n32fContext.SecContext.ProtectionPolicy.DataTypeEncPolicy != nil {
+		dataTypeEncPolicy = n32fContext.SecContext.ProtectionPolicy.DataTypeEncPolicy
+	}
 	for _, ie := range ieList {
-		switch ie.IeLoc {
-		case models.IeLocation_HEADER:
-			for headerIdx, header := range headers {
-				if header.Header == ie.RspIe {
-					temp := make(map[string]interface{})
-					temp["string"] = header.Value.Value
-					rspDataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(rspDataToIntegrityProtectAndCipherBlock.DataToEncrypt, temp)
-					header.Value.Value = "encBlockIndex/" + string(idx)
-					headers[headerIdx] = header
-					idx++
-				}
+		needToEncrept := false
+		for _, ieType := range dataTypeEncPolicy {
+			if ie.IeType == ieType {
+				needToEncrept = true
+				break
 			}
-		case models.IeLocation_BODY:
-			for payloadIdx, value := range payload {
-				if value.IePath == ie.RspIe {
-					httpPayload := models.HttpPayload{
-						IePath:          value.IePath,
-						IeValueLocation: value.IeValueLocation,
-						Value:           map[string]interface{}{"encBlockIndex": idx},
+		}
+		if needToEncrept {
+			switch ie.IeLoc {
+			case models.IeLocation_HEADER:
+				for headerIdx, header := range headers {
+					if header.Header == ie.RspIe {
+						temp := make(map[string]interface{})
+						temp["string"] = header.Value.Value
+						rspDataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(rspDataToIntegrityProtectAndCipherBlock.DataToEncrypt, temp)
+						header.Value.Value = "encBlockIndex/" + string(idx)
+						headers[headerIdx] = header
+						idx++
 					}
-					rspDataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(rspDataToIntegrityProtectAndCipherBlock.DataToEncrypt, value.Value)
-					payload[payloadIdx] = httpPayload
-					idx++
+				}
+			case models.IeLocation_BODY:
+				for payloadIdx, value := range payload {
+					if value.IePath == ie.RspIe {
+						httpPayload := models.HttpPayload{
+							IePath:          value.IePath,
+							IeValueLocation: value.IeValueLocation,
+							Value:           map[string]interface{}{"encBlockIndex": idx},
+						}
+						rspDataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(rspDataToIntegrityProtectAndCipherBlock.DataToEncrypt, value.Value)
+						payload[payloadIdx] = httpPayload
+						idx++
+					}
 				}
 			}
 		}
@@ -522,7 +535,7 @@ func generaterawJSONWebSignature(flatJwsJson models.FlatJwsJson) (jose.JSONWebSi
 func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfos []models.IpxProviderSecInfo, ipxId sepp_context.FQDN) *models.ProblemDetails {
 	var iPXSecInfo *models.IpxProviderSecInfo
 	for _, temp := range iPXSecInfos {
-		if ipxId == iPXSecInfo.IpxProviderId {
+		if ipxId == temp.IpxProviderId {
 			iPXSecInfo = &temp
 			break
 		}
