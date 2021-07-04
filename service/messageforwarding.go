@@ -193,7 +193,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 		if secInfo.SecCap == models.SecurityCapability_TLS {
 			logger.Messageforward.Infoln("start tls forwarding procedure")
 			if !secInfo.Var3GppSbiTargetApiRootSupported {
-
+				logger.Messageforward.Infoln("3GppSbiTargetApiRoot not Supported")
 				// TODO unsupport 3GppSbiTargetApiRoot
 			} else {
 

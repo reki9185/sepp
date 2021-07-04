@@ -268,6 +268,19 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 	var queryParam url.Values
 	queryParam, _ = url.ParseQuery(dataToIntegrityProtectBlock.RequestLine.QueryFragment)
 	for k, v := range queryParam {
+		if v[0] == "encBlockIndex" {
+			idx, err := strconv.Atoi(v[1])
+			if err != nil {
+				logger.Messageforward.Errorln("reformate message fail", err)
+				var problemDetails models.ProblemDetails
+				problemDetails.Cause = "reformate message fail"
+				problemDetails.Status = http.StatusBadRequest
+				// TODO return error
+				return nil, &problemDetails
+			}
+			temp := dataToIntegrityProtectAndCipherBlock.DataToEncrypt[idx]["string"]
+			newquery.Add(k, temp.(string))
+		}
 		for _, iv := range v {
 			newquery.Add(k, iv)
 		}
