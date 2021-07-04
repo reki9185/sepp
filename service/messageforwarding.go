@@ -233,7 +233,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			metaData := models.MetaData{
 				N32fContextId:   n32fContext.N32fContextId,
 				MessageId:       messageId,
-				AuthorizedIpxId: "NULL",
+				AuthorizedIpxId: self.SelfIPXSecInfo[0].IpxProviderId,
 			}
 			requestLine := models.RequestLine{
 				Method:          models.HttpMethod(request.Method),
@@ -263,7 +263,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 
 			var ieList []models.IeInfo
 
-			for _, value := range n32fContext.SecContext.ProtectionPolicy.ApiIeMappingList {
+			for _, value := range self.LocalProtectionPolicy.ApiIeMappingList {
 				if value.ApiSignature.Uri == request.URL.Path && value.ApiMethod == models.HttpMethod(request.Method) {
 					ieList = value.IeList
 					break
@@ -306,7 +306,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 								temp := make(map[string]interface{})
 								temp["string"] = header.Value.Value
 								dataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(dataToIntegrityProtectAndCipherBlock.DataToEncrypt, temp)
-								header.Value.Value = "encBlockIndex/" + string(idx)
+								header.Value.Value = "encBlockIndex/" + strconv.Itoa(idx)
 								headers[headerIdx] = header
 								idx++
 							}
@@ -332,9 +332,38 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 								"string": paramValue[0],
 							}
 							dataToIntegrityProtectAndCipherBlock.DataToEncrypt = append(dataToIntegrityProtectAndCipherBlock.DataToEncrypt, dataToEncrypt)
-							queryParams[ie.ReqIe] = []string{"encBlockIndex", string(idx)}
+							queryParams[ie.ReqIe] = []string{"encBlockIndex", strconv.Itoa(idx)}
 							requestLine.QueryFragment = queryParams.Encode()
 							idx++
+						}
+					}
+				}
+				if ie.IsModifiable {
+					fmt.Println("342", ie)
+					switch ie.IeLoc {
+					case models.IeLocation_HEADER:
+						for headerIdx, header := range headers {
+							if header.Header == ie.ReqIe {
+								header.Value.Value = ""
+								headers[headerIdx] = header
+							}
+						}
+					case models.IeLocation_BODY:
+						for payloadIdx, value := range payload {
+							if value.IePath == ie.ReqIe {
+								httpPayload := models.HttpPayload{
+									IePath:          value.IePath,
+									IeValueLocation: value.IeValueLocation,
+									Value:           make(map[string]interface{}),
+								}
+								payload[payloadIdx] = httpPayload
+							}
+						}
+					case models.IeLocation_URI_PARAM:
+						queryParams, _ := url.ParseQuery(requestLine.QueryFragment)
+						if paramValue := queryParams.Get(ie.ReqIe); paramValue != "" {
+							queryParams[ie.ReqIe] = []string{""}
+							requestLine.QueryFragment = queryParams.Encode()
 						}
 					}
 				}
@@ -369,79 +398,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			if data, err := base64.RawURLEncoding.DecodeString(flatJweJson.Aad); err != nil {
 				logger.Messageforward.Errorln("Decode flatJweJson.Aad error:", err)
 			} else {
-				if rsp.ModificationsBlock != nil {
-					var dataToIntegrityProtectBlockBeforePatch models.DataToIntegrityProtectBlock
-					json.Unmarshal(data, &dataToIntegrityProtectBlockBeforePatch)
-					object, payload := generaterawJSONWebSignature(rsp.ModificationsBlock[0])
-					n32fContextId := dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
-					var modifications models.Modifications
-					if err := json.Unmarshal(payload, &modifications); err != nil {
-						logger.Messageforward.Errorln("unmarshal error", err)
-						var problemDetails models.ProblemDetails
-						problemDetails.Cause = "unmarshal error"
-						problemDetails.Status = http.StatusBadRequest
-						// TODO return error
-						rspBody, _ := json.Marshal(problemDetails)
-						rspWriter.WriteHeader(http.StatusBadRequest)
-						rspWriter.Write(rspBody)
-					}
-					self := sepp_context.GetSelf()
-					if problem := verifyJSONWebSignature(object, self.N32fContextPool[n32fContextId].SecContext.IPXSecInfo, modifications.Identity); problem != nil {
-						rspBody, _ := json.Marshal(problem)
-						rspWriter.WriteHeader(http.StatusBadRequest)
-						rspWriter.Write(rspBody)
-					}
-					var ipxIeList []models.IeInfo
-					for _, value := range self.N32fContextPool[n32fContextId].SecContext.ProtectionPolicy.ApiIeMappingList {
-						if value.ApiSignature.Uri == request.URL.Path && value.ApiMethod == models.HttpMethod(request.Method) {
-							ipxIeList = value.IeList
-							break
-						}
-					}
-					if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications, ipxIeList); problem != nil {
-						rspBody, _ := json.Marshal(problem)
-						rspWriter.WriteHeader(http.StatusBadRequest)
-						rspWriter.Write(rspBody)
-					} else {
-						dataToIntegrityProtectBlockBeforePatch = *dataToIntegrityProtectBlock
-					}
-
-					object, payload = generaterawJSONWebSignature(rsp.ModificationsBlock[1])
-					n32fContextId = dataToIntegrityProtectBlockBeforePatch.MetaData.N32fContextId
-					var modifications2 models.Modifications
-					if err := json.Unmarshal(payload, &modifications2); err != nil {
-						logger.Messageforward.Errorln("unmarshal error", err)
-						var problemDetails models.ProblemDetails
-						problemDetails.Cause = "unmarshal error"
-						problemDetails.Status = http.StatusBadRequest
-						rspBody, _ := json.Marshal(problemDetails)
-						rspWriter.WriteHeader(http.StatusBadRequest)
-						rspWriter.Write(rspBody)
-					}
-					if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications2.Identity); problem != nil {
-						rspBody, _ := json.Marshal(problem)
-						rspWriter.WriteHeader(http.StatusBadRequest)
-						rspWriter.Write(rspBody)
-					}
-					var aad []byte
-					var localIpxIeList []models.IeInfo
-					for _, value := range self.IPXProtectionPolicy {
-						if value.ApiSignature.Uri == request.URL.Path && value.ApiMethod == models.HttpMethod(request.Method) {
-							localIpxIeList = value.IeList
-							break
-						}
-					}
-					if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications2, localIpxIeList); problem != nil {
-						rspBody, _ := json.Marshal(problem)
-						rspWriter.WriteHeader(http.StatusBadRequest)
-						rspWriter.Write(rspBody)
-					} else {
-						aad, _ = json.Marshal(dataToIntegrityProtectBlock)
-					}
-					rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: aad}
-				} else {
-					rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: data}
-				}
+				rawJSONWebEncryption.Aad = &jose.ByteBuffer{Data: data}
 			}
 			if data, err := base64.RawURLEncoding.DecodeString(flatJweJson.Ciphertext); err != nil {
 				logger.Messageforward.Errorln("Decode flatJweJson.Ciphertext error:", err)
@@ -538,6 +495,83 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			if err := json.Unmarshal(decrypted, &rspDataToIntegrityProtectAndCipherBlock); err != nil {
 				logger.Messageforward.Errorln("json unmarshal error:", err)
 			}
+
+			if rsp.ModificationsBlock != nil {
+				object, payload := generaterawJSONWebSignature(rsp.ModificationsBlock[0])
+				var modifications models.Modifications
+				if err := json.Unmarshal(payload, &modifications); err != nil {
+					logger.Messageforward.Errorln("unmarshall modification fail", err)
+					var problemDetails models.ProblemDetails
+					problemDetails.Cause = "unmarshall modification fail"
+					problemDetails.Status = http.StatusInternalServerError
+					rspWriter.WriteHeader(http.StatusInternalServerError)
+					rsp, err := json.Marshal(problemDetails)
+					if err != nil {
+						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
+					}
+					rspWriter.Write(rsp)
+				}
+
+				if problem := verifyJSONWebSignature(object, n32fContext.SecContext.IPXSecInfo, modifications.Identity); problem != nil {
+					rspWriter.WriteHeader(http.StatusInternalServerError)
+					rsp, err := json.Marshal(problem)
+					if err != nil {
+						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
+					}
+					rspWriter.Write(rsp)
+				}
+				var dataToIntegrityProtectBlockBeforePatch models.DataToIntegrityProtectBlock
+				var ieList []models.IeInfo
+				for _, value := range n32fContext.SecContext.ProtectionPolicy.ApiIeMappingList {
+					if value.ApiSignature.Uri == dataToIntegrityProtectBlock.RequestLine.Path && value.ApiMethod == dataToIntegrityProtectBlock.RequestLine.Method {
+						ieList = value.IeList
+						break
+					}
+				}
+				if dataToIntegrityProtectBlock, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlock, modifications, ieList); problem != nil {
+					rspWriter.WriteHeader(http.StatusInternalServerError)
+					rsp, err := json.Marshal(problem)
+					if err != nil {
+						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
+					}
+					rspWriter.Write(rsp)
+				} else {
+					dataToIntegrityProtectBlockBeforePatch = *dataToIntegrityProtectBlock
+				}
+				object, payload = generaterawJSONWebSignature(rsp.ModificationsBlock[1])
+				if err := json.Unmarshal(payload, &modifications); err != nil {
+					logger.Messageforward.Errorln("unmarshall modification fail", err)
+					var problemDetails models.ProblemDetails
+					problemDetails.Cause = "unmarshall modification fail"
+					problemDetails.Status = http.StatusInternalServerError
+					rspWriter.WriteHeader(http.StatusInternalServerError)
+					rsp, err := json.Marshal(problemDetails)
+					if err != nil {
+						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
+					}
+					rspWriter.Write(rsp)
+				}
+
+				if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications.Identity); problem != nil {
+					rspWriter.WriteHeader(http.StatusInternalServerError)
+					rsp, err := json.Marshal(problem)
+					if err != nil {
+						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
+					}
+					rspWriter.Write(rsp)
+				}
+				if dataToIntegrityProtectBlockBeforePatch, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications, ieList); problem != nil {
+					rspWriter.WriteHeader(http.StatusInternalServerError)
+					rsp, err := json.Marshal(problem)
+					if err != nil {
+						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
+					}
+					rspWriter.Write(rsp)
+				} else {
+					dataToIntegrityProtectBlock = *dataToIntegrityProtectBlockBeforePatch
+				}
+			}
+
 			rspBody := jsonhandler.BuildJsonBody(rspDataToIntegrityProtectBlock.Payload, rspDataToIntegrityProtectAndCipherBlock)
 
 			for _, header := range rspDataToIntegrityProtectBlock.Headers {
@@ -621,7 +655,6 @@ func verifyJSONWebSignature(object jose.JSONWebSignature, iPXSecInfos []models.I
 		var problemDetails models.ProblemDetails
 		problemDetails.Cause = "IPX not authorized"
 		problemDetails.Status = http.StatusBadRequest
-		// TODO return error
 		return &problemDetails
 	}
 	var publicKey *ecdsa.PublicKey
@@ -660,6 +693,9 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 				header.Value = &models.EncodedHttpHeaderValue{
 					Value: temp["value"].(string),
 				}
+				if problem := VerifyIPXOperationForHeader(ieList, header); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Headers = append(sourceJson.Headers[:idx+1], sourceJson.Headers[idx:]...)
 				sourceJson.Headers[idx] = header
 			case "payload":
@@ -670,11 +706,17 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 					IeValueLocation: models.IeLocation(payloadMap["ieValueLocation"].(string)),
 					Value:           payloadMap["value"].(map[string]interface{}),
 				}
+				if problem := VerifyIPXOperationForPayload(ieList, payload); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Payload = append(sourceJson.Payload[:idx+1], sourceJson.Payload[idx:]...)
 				sourceJson.Payload[idx] = payload
 
 			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				if problem := VerifyIPXOperationForQuery(ieList, temp[1]); problem != nil {
+					return nil, problem
+				}
 				queryParams.Add(temp[1], value.Value.(string))
 				sourceJson.RequestLine.QueryFragment = queryParams.Encode()
 			}
@@ -684,17 +726,26 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 				idx, _ := strconv.Atoi(temp[1])
 				idxFrom, _ := strconv.Atoi(strings.Split(value.From, "/")[1])
 				sourceHeader := sourceJson.Headers[idxFrom]
+				if problem := VerifyIPXOperationForHeader(ieList, sourceHeader); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Headers = append(sourceJson.Headers[:idx+1], sourceJson.Headers[idx:]...)
 				sourceJson.Headers[idx] = sourceHeader
 			case "payload":
 				idx, _ := strconv.Atoi(temp[1])
 				idxFrom, _ := strconv.Atoi(strings.Split(value.From, "/")[1])
 				sourcePayload := sourceJson.Payload[idxFrom]
+				if problem := VerifyIPXOperationForPayload(ieList, sourcePayload); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Payload = append(sourceJson.Payload[:idx+1], sourceJson.Payload[idx:]...)
 				sourceJson.Payload[idx] = sourcePayload
 			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
 				paramBody := queryParams.Get(strings.Split(value.From, "/")[1])
+				if problem := VerifyIPXOperationForQuery(ieList, temp[1]); problem != nil {
+					return nil, problem
+				}
 				queryParams.Add(temp[1], paramBody)
 			}
 		case models.PatchOperation_MOVE:
@@ -703,6 +754,9 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 				idx, _ := strconv.Atoi(temp[1])
 				idxFrom, _ := strconv.Atoi(strings.Split(value.From, "/")[1])
 				sourceHeader := sourceJson.Headers[idxFrom]
+				if problem := VerifyIPXOperationForHeader(ieList, sourceHeader); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Headers = append(sourceJson.Headers[:idxFrom], sourceJson.Headers[idxFrom+1:]...)
 				sourceJson.Headers = append(sourceJson.Headers[:idx+1], sourceJson.Headers[idx:]...)
 				sourceJson.Headers[idx] = sourceHeader
@@ -710,22 +764,32 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 				idx, _ := strconv.Atoi(temp[1])
 				idxFrom, _ := strconv.Atoi(strings.Split(value.From, "/")[1])
 				sourcePayload := sourceJson.Payload[idxFrom]
+				if problem := VerifyIPXOperationForPayload(ieList, sourcePayload); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Payload = append(sourceJson.Payload[:idxFrom], sourceJson.Payload[idxFrom+1:]...)
 				sourceJson.Payload = append(sourceJson.Payload[:idx+1], sourceJson.Payload[idx:]...)
 				sourceJson.Payload[idx] = sourcePayload
-
-			case "URI_PARAM":
 			}
 		case models.PatchOperation_REMOVE:
 			switch temp[0] {
 			case "header":
 				idx, _ := strconv.Atoi(temp[1])
+				if problem := VerifyIPXOperationForHeader(ieList, sourceJson.Headers[idx]); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Headers = append(sourceJson.Headers[:idx], sourceJson.Headers[idx+1:]...)
 			case "payload":
 				idx, _ := strconv.Atoi(temp[1])
+				if problem := VerifyIPXOperationForPayload(ieList, sourceJson.Payload[idx]); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Payload = append(sourceJson.Payload[:idx], sourceJson.Payload[idx+1:]...)
 			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				if problem := VerifyIPXOperationForQuery(ieList, temp[1]); problem != nil {
+					return nil, problem
+				}
 				queryParams.Del(temp[1])
 			}
 		case models.PatchOperation_REPLACE:
@@ -740,6 +804,9 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 				header.Value = &models.EncodedHttpHeaderValue{
 					Value: temp["value"].(string),
 				}
+				if problem := VerifyIPXOperationForHeader(ieList, header); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Headers[idx] = header
 			case "payload":
 				idx, _ := strconv.Atoi(temp[1])
@@ -749,10 +816,15 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 					IeValueLocation: models.IeLocation(payloadMap["ieValueLocation"].(string)),
 					Value:           payloadMap["value"].(map[string]interface{}),
 				}
+				if problem := VerifyIPXOperationForPayload(ieList, payload); problem != nil {
+					return nil, problem
+				}
 				sourceJson.Payload[idx] = payload
-
 			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				if problem := VerifyIPXOperationForQuery(ieList, temp[1]); problem != nil {
+					return nil, problem
+				}
 				queryParams.Set(temp[1], value.Value.(string))
 				sourceJson.RequestLine.QueryFragment = queryParams.Encode()
 			}
@@ -766,6 +838,9 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 				}
 				header.Value = &models.EncodedHttpHeaderValue{
 					Value: headerMap["value"].(map[string]interface{})["value"].(string),
+				}
+				if problem := VerifyIPXOperationForHeader(ieList, header); problem != nil {
+					return nil, problem
 				}
 				if !reflect.DeepEqual(sourceJson.Headers[headerIdx], header) {
 					logger.Messageforward.Errorln("JSON patch test failed", header)
@@ -782,6 +857,9 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 					IeValueLocation: models.IeLocation(payloadMap["ieValueLocation"].(string)),
 					Value:           payloadMap["value"].(map[string]interface{}),
 				}
+				if problem := VerifyIPXOperationForPayload(ieList, payload); problem != nil {
+					return nil, problem
+				}
 				if !reflect.DeepEqual(sourceJson.Payload[idx], payload) {
 					logger.Messageforward.Errorln("JSON patch test failed", payload)
 					var problemDetails models.ProblemDetails
@@ -791,6 +869,9 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 				}
 			case "URI_PARAM":
 				queryParams, _ := url.ParseQuery(sourceJson.RequestLine.QueryFragment)
+				if problem := VerifyIPXOperationForQuery(ieList, temp[1]); problem != nil {
+					return nil, problem
+				}
 				if !reflect.DeepEqual(value.Value.(string), queryParams.Get(temp[1])) {
 					logger.Messageforward.Errorln("JSON patch test failed", value)
 					var problemDetails models.ProblemDetails
@@ -802,4 +883,55 @@ func verifyAndDoJsonPatch(sourceJson models.DataToIntegrityProtectBlock, modific
 		}
 	}
 	return &sourceJson, nil
+}
+
+func VerifyIPXOperationForHeader(ieList []models.IeInfo, header models.HttpHeader) *models.ProblemDetails {
+	for _, ie := range ieList {
+		if ie.IeLoc == models.IeLocation_HEADER && ie.RspIe == header.Header {
+			if ie.IsModifiable {
+				return nil
+			} else {
+				break
+			}
+		}
+	}
+	logger.Messageforward.Errorln("IPX's op not authorizes", header)
+	var problemDetails models.ProblemDetails
+	problemDetails.Cause = "IPX's op not authorizes"
+	problemDetails.Status = http.StatusInternalServerError
+	return &problemDetails
+}
+
+func VerifyIPXOperationForPayload(ieList []models.IeInfo, payload models.HttpPayload) *models.ProblemDetails {
+	for _, ie := range ieList {
+		if ie.IeLoc == models.IeLocation_BODY && ie.RspIe == payload.IePath {
+			if ie.IsModifiable {
+				return nil
+			} else {
+				break
+			}
+		}
+	}
+	logger.Messageforward.Errorln("IPX's op not authorizes", payload)
+	var problemDetails models.ProblemDetails
+	problemDetails.Cause = "IPX's op not authorizes"
+	problemDetails.Status = http.StatusInternalServerError
+	return &problemDetails
+}
+
+func VerifyIPXOperationForQuery(ieList []models.IeInfo, queryParam string) *models.ProblemDetails {
+	for _, ie := range ieList {
+		if ie.IeLoc == models.IeLocation_URI_PARAM && ie.RspIe == queryParam {
+			if ie.IsModifiable {
+				return nil
+			} else {
+				break
+			}
+		}
+	}
+	logger.Messageforward.Errorln("IPX's op not authorizes", queryParam)
+	var problemDetails models.ProblemDetails
+	problemDetails.Cause = "IPX's op not authorizes"
+	problemDetails.Status = http.StatusInternalServerError
+	return &problemDetails
 }

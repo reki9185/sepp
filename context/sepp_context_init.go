@@ -99,9 +99,10 @@ func BuildLocalProtectionPolice(context *SEPPContext) {
 	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
 	ieInfo = models.IeInfo{
-		IeLoc:  models.IeLocation_URI_PARAM,
-		IeType: models.IeType_NONSENSITIVE,
-		ReqIe:  "target-nf-type",
+		IeLoc:        models.IeLocation_URI_PARAM,
+		IeType:       models.IeType_NONSENSITIVE,
+		ReqIe:        "target-nf-type",
+		IsModifiable: true,
 	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
 	ieInfo = models.IeInfo{
@@ -273,10 +274,9 @@ func BuildLocalProtectionPolice(context *SEPPContext) {
 	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
 	ieInfo = models.IeInfo{
-		IeLoc:        models.IeLocation_BODY,
-		IeType:       models.IeType_NONSENSITIVE,
-		RspIe:        "/nfInstances/[0]/nfStatus",
-		IsModifiable: true,
+		IeLoc:  models.IeLocation_BODY,
+		IeType: models.IeType_NONSENSITIVE,
+		RspIe:  "/nfInstances/[0]/nfStatus",
 	}
 	apiIeMapping.IeList = append(apiIeMapping.IeList, ieInfo)
 

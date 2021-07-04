@@ -203,7 +203,7 @@ func (sepp *SEPP) Start() {
 		capability, ok := consumer.SendExchangeCapability(ipAddr)
 		if !ok {
 			initLog.Infoln("exchange capability fail")
-			return
+			continue
 		}
 		if *capability == models.SecurityCapability_PRINS {
 			initLog.Infoln("finish exchange capability")
