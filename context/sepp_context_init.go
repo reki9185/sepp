@@ -73,7 +73,7 @@ func InitSeppContext(context *SEPPContext) {
 		}
 
 		if sbi.IPv4ForN32f != "" {
-			context.IPv4ForN32f = sbi.RegisterIPv4
+			context.IPv4ForN32f = sbi.IPv4ForN32f
 		}
 
 		context.BindingIPv4 = os.Getenv(sbi.BindingIPv4)
