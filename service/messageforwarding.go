@@ -166,7 +166,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 		secInfo, ok := self.PLMNSecInfo[plmnId]
 		if !ok {
 			logger.Messageforward.Infoln("Start handshake procedure:", plmnId)
-			securityCapability, ok := consumer.SendExchangeCapability(remoteSeppAddr)
+			securityCapability, ok := consumer.SendExchangeCapability(remoteSeppAddr.IpForSBI)
 			if !ok {
 				problemDetail := models.ProblemDetails{
 					Title:  "can't reach remote SEPP",
@@ -182,9 +182,9 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				rspWriter.Write(rsp)
 				return
 			} else if *securityCapability == models.SecurityCapability_PRINS {
-				consumer.ExchangeCiphersuite(remoteSeppAddr, plmnId)
-				consumer.ExchangeProtectionPolicy(remoteSeppAddr, plmnId)
-				consumer.ExchangeIPXInfo(remoteSeppAddr, plmnId)
+				consumer.ExchangeCiphersuite(remoteSeppAddr.IpForSBI, plmnId)
+				consumer.ExchangeProtectionPolicy(remoteSeppAddr.IpForSBI, plmnId)
+				consumer.ExchangeIPXInfo(remoteSeppAddr.IpForSBI, plmnId)
 			}
 		}
 		if secInfo.SecCap == models.SecurityCapability_TLS {
@@ -194,7 +194,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				// TODO unsupport 3GppSbiTargetApiRoot
 			} else {
 
-				newUrl := remoteSeppAddr + request.RequestURI
+				newUrl := remoteSeppAddr.IpForSBI + request.RequestURI
 				proxyReq, err := http.NewRequest(request.Method, newUrl, bytes.NewReader(requestBody))
 				proxyReq.Header = make(http.Header)
 				for h, val := range request.Header {
@@ -274,7 +274,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 					break
 				}
 			}
-			jweKey := self.N32fContextPool[secInfo.N32fContexId].SecContext.SessionKeys.SendReqKey
+			jweKey := n32fContext.SecContext.SessionKeys.SendReqKey
 			if ieList == nil {
 				problemDetail := models.ProblemDetails{
 					Title:  "This api not support",
@@ -390,8 +390,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			logger.Messageforward.Infoln("start send")
 
 			// rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, remoteSeppAddr, jweKey)
-			seppN32Server := strings.Replace(remoteSeppAddr, "8000", "8001", 1)
-			rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, "http://10.10.0.39:8000/"+seppN32Server[8:], jweKey)
+			rsp, err := consumer.ForwardMessage(secInfo.N32fContexId, clearText, aad, self.IpxUri+"/"+n32fContext.PeerInformation.RemoteSeppAddress, jweKey)
 
 			flatJweJson := rsp.ReformattedData
 			var rawJSONWebEncryption jose.RawJSONWebEncryption

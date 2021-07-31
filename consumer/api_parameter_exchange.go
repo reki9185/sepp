@@ -51,7 +51,7 @@ func ExchangeCiphersuite(seppUri string, fqdn string) {
 			var n32fContext sepp_context.N32fContext
 			var peerInfo sepp_context.N32fPeerInformation
 			peerInfo.RemotePlmnId = rsp.Sender
-			peerInfo.RemoteSeppAddress = self.FqdnIpMap[rsp.Sender]
+			peerInfo.RemoteSeppAddress = self.FqdnIpMap[rsp.Sender].IpForN32f
 			n32fContext.PeerInformation = peerInfo
 			var secContext sepp_context.N32fSecContext
 			secContext.CipherSuitList.JweCipherSuite = rsp.SelectedJweCipherSuite

@@ -7,11 +7,11 @@ import (
 )
 
 type FQDN = string
-type IpAddress = string
 type N32fContextId = string //('^[A-Fa-f0-9]{16}$')
 type SEPPContext struct {
 	SelfFqdn                   FQDN
 	FqdnIpMap                  map[FQDN]IpAddress
+	IpxUri                     string
 	SelfIPXSecInfo             []models.IpxProviderSecInfo
 	JweCipherSuiteList         []string
 	JwsCipherSuiteList         []string
@@ -29,6 +29,11 @@ type SEPPContext struct {
 	LocalProtectionPolicy      models.ProtectionPolicy
 	IPXProtectionPolicy        []models.ApiIeMapping
 	MessagePool                sync.Map
+}
+
+type IpAddress struct {
+	IpForSBI  string
+	IpForN32f string
 }
 
 type N32fContext struct {

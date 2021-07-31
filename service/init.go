@@ -200,18 +200,18 @@ func (sepp *SEPP) Start() {
 		initLog.Warnf("Initialize HTTP server: +%v", err)
 	}
 	for fqdn, ipAddr := range self.FqdnIpMap {
-		capability, ok := consumer.SendExchangeCapability(ipAddr)
+		capability, ok := consumer.SendExchangeCapability(ipAddr.IpForSBI)
 		if !ok {
 			initLog.Infoln("exchange capability fail")
 			continue
 		}
 		if *capability == models.SecurityCapability_PRINS {
 			initLog.Infoln("finish exchange capability")
-			consumer.ExchangeCiphersuite(ipAddr, fqdn)
+			consumer.ExchangeCiphersuite(ipAddr.IpForSBI, fqdn)
 			initLog.Infoln("finish ciphersuit exchange: %s", self.N32fContextPool)
-			consumer.ExchangeProtectionPolicy(ipAddr, fqdn)
+			consumer.ExchangeProtectionPolicy(ipAddr.IpForSBI, fqdn)
 			initLog.Infoln("finish protection policy exchange: %s", self.N32fContextPool)
-			consumer.ExchangeIPXInfo(ipAddr, fqdn)
+			consumer.ExchangeIPXInfo(ipAddr.IpForSBI, fqdn)
 			initLog.Infoln("finish IPX Info exchange: %s", self.N32fContextPool)
 		}
 	}
@@ -298,7 +298,7 @@ func (sepp *SEPP) Terminate() {
 		n32fContextInfo := models.N32fContextInfo{
 			N32fContextId: secInfo.N32fContextId,
 		}
-		consumer.SendN32fContextTerminate(self.FqdnIpMap[secInfo.PeerInformation.RemotePlmnId], secInfo.PeerInformation.RemotePlmnId, n32fContextInfo)
+		consumer.SendN32fContextTerminate(self.FqdnIpMap[secInfo.PeerInformation.RemotePlmnId].IpForSBI, secInfo.PeerInformation.RemotePlmnId, n32fContextInfo)
 	}
 	// deregister with NRF
 	problemDetails, err := consumer.SendDeregisterNFInstance()

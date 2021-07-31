@@ -33,7 +33,12 @@ func InitSeppContext(context *SEPPContext) {
 	context.PLMNSecInfo = make(map[FQDN]SecInfo)
 	for index := range configuration.FqdnSupportList {
 		fqdn := configuration.FqdnSupportList[index].Fqdn
-		ip := configuration.FqdnSupportList[index].Ip
+		ipForSBI := configuration.FqdnSupportList[index].IpForSbi
+		ipForN32f := configuration.FqdnSupportList[index].IpForN32f
+		ip := IpAddress{
+			IpForN32f: ipForN32f,
+			IpForSBI:  ipForSBI,
+		}
 		context.FqdnIpMap[fqdn] = ip
 		var secInfo SecInfo
 		context.PLMNSecInfo[fqdn] = secInfo
@@ -49,6 +54,7 @@ func InitSeppContext(context *SEPPContext) {
 	context.SupportedSecCapabilityList = append(context.SupportedSecCapabilityList, "TLS")
 	context.SupportedSecCapabilityList = append(context.SupportedSecCapabilityList, "PRINS")
 	context.NrfUri = configuration.NrfUri
+	context.IpxUri = configuration.IpxUri
 	context.UriScheme = models.UriScheme(configuration.Sbi.Scheme) // default uri scheme
 	context.RegisterIPv4 = factory.SEPP_DEFAULT_IPV4               // default localhost
 	context.SBIPort = factory.SEPP_DEFAULT_PORT_INT                // default port

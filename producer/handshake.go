@@ -195,7 +195,7 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		}
 		var peerInfo sepp_context.N32fPeerInformation
 		peerInfo.RemotePlmnId = fqdn
-		peerInfo.RemoteSeppAddress, _ = self.FqdnIpMap[fqdn]
+		peerInfo.RemoteSeppAddress = self.FqdnIpMap[fqdn].IpForN32f
 		n32fContext.PeerInformation = peerInfo
 		var secContext sepp_context.N32fSecContext
 		secContext.CipherSuitList = cipherSuites
@@ -351,7 +351,7 @@ func N32fErrorReportProcedure(n32fErrorInfo models.N32fErrorInfo) *models.Proble
 	temp := strings.Split(sbiTargetApiRoot, "://")
 	temp = strings.Split(temp[1], ":")
 	plmnId := temp[0]
-	remoteSeppAddr, _ := self.FqdnIpMap[plmnId]
+	remoteSeppAddr := self.FqdnIpMap[plmnId].IpForSBI
 	plmnSecInfo := self.PLMNSecInfo[plmnId]
 	n32fContext := self.N32fContextPool[plmnSecInfo.N32fContexId]
 	go func() {
