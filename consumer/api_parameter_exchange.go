@@ -159,7 +159,9 @@ func ExchangeProtectionPolicy(seppUri string, fqdn string) {
 	self := sepp_context.GetSelf()
 	var secParamExchReqData models.SecParamExchReqData
 	secParamExchReqData.N32fContextId = self.PLMNSecInfo[fqdn].N32fContexId
-	secParamExchReqData.ProtectionPolicyInfo.ApiIeMappingList = self.LocalProtectionPolicy.ApiIeMappingList
+	secParamExchReqData.ProtectionPolicyInfo = &models.ProtectionPolicy{
+		ApiIeMappingList: self.LocalProtectionPolicy.ApiIeMappingList,
+	}
 	secParamExchReqData.Sender = self.SelfFqdn
 
 	var res *http.Response

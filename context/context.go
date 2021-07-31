@@ -21,6 +21,7 @@ type SEPPContext struct {
 	SBIPort                    int
 	RegisterIPv4               string
 	BindingIPv4                string
+	IPv4ForN32f                string
 	Url                        string
 	UriScheme                  models.UriScheme
 	NrfUri                     string

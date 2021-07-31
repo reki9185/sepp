@@ -43,7 +43,7 @@ type Sbi struct {
 	Scheme       string `yaml:"scheme"`
 	RegisterIPv4 string `yaml:"registerIPv4,omitempty"` // IP that is registered at NRF.
 	BindingIPv4  string `yaml:"bindingIPv4,omitempty"`  // IP used to run the server in the node.
-	iPv4ForN32f  string `yaml:"iPv4ForN32f,omitempty"`
+	IPv4ForN32f  string `yaml:"iPv4ForN32f,omitempty"`
 	Port         int    `yaml:"port,omitempty"`
 }
 type FqdnIpMap struct {

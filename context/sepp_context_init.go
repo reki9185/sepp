@@ -72,6 +72,10 @@ func InitSeppContext(context *SEPPContext) {
 			context.UriScheme = models.UriScheme_HTTP
 		}
 
+		if sbi.IPv4ForN32f != "" {
+			context.IPv4ForN32f = sbi.RegisterIPv4
+		}
+
 		context.BindingIPv4 = os.Getenv(sbi.BindingIPv4)
 		if context.BindingIPv4 != "" {
 			logger.InitLog.Info("Parsing ServerIPv4 address from ENV Variable.")

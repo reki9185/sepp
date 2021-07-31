@@ -217,7 +217,7 @@ func (sepp *SEPP) Start() {
 	}
 
 	go func() {
-		n32fAddr := fmt.Sprintf("%s:%d", self.BindingIPv4, 8001)
+		n32fAddr := fmt.Sprintf("%s:%d", self.IPv4ForN32f, self.SBIPort)
 		n32fServer, err := http2_util.NewServer(n32fAddr, seppLogPath, n32fRouter)
 		if n32fServer == nil {
 			initLog.Errorf("Initialize HTTP server failed: %+v", err)
