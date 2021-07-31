@@ -1,10 +1,8 @@
 package context
 
 import (
-	// "regexp"
-	// "sync"
+	"sync"
 
-	// "github.com/yangalan0903/sepp/logger"
 	"github.com/yangalan0903/openapi/models"
 )
 
@@ -30,13 +28,14 @@ type SEPPContext struct {
 	N32fContextPool            map[N32fContextId]N32fContext
 	LocalProtectionPolicy      models.ProtectionPolicy
 	IPXProtectionPolicy        []models.ApiIeMapping
+	MessagePool                sync.Map
 }
 
 type N32fContext struct {
 	N32fContextId   N32fContextId
 	PeerInformation N32fPeerInformation
 	SecContext      N32fSecContext
-	ContextInfo     N32fContextInfo
+	Validity        bool
 }
 
 type N32fPeerInformation struct {
@@ -74,12 +73,6 @@ type CipherSuite struct {
 	JweCipherSuite string
 	JwsCipherSuite string
 }
-
-type N32fContextInfo struct {
-	Validity string
-	Usage    string
-}
-
 type SecInfo struct {
 	SecCap                           models.SecurityCapability
 	N32fContexId                     string

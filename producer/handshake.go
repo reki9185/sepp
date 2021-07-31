@@ -6,9 +6,11 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"strings"
 
 	"github.com/free5gc/http_wrapper"
 	"github.com/yangalan0903/openapi/models"
+	"github.com/yangalan0903/sepp/consumer"
 	sepp_context "github.com/yangalan0903/sepp/context"
 	"github.com/yangalan0903/sepp/logger"
 	"golang.org/x/crypto/hkdf"
@@ -90,10 +92,10 @@ func ExchangeCapabilityProcedure(secNegotiateReqData models.SecNegotiateReqData)
 	for _, secCap := range supportedSecCapabilityList {
 		if secCap == models.SecurityCapability_PRINS {
 			securityCapability = secCap
-			// break
+			break
 		} else if secCap == models.SecurityCapability_TLS {
 			securityCapability = secCap
-			break
+			// break
 		}
 	}
 	if securityCapability == "" {
@@ -315,4 +317,74 @@ func ExchangeParamsProcedure(secParamExchReqData models.SecParamExchReqData, mas
 		Cause:  "UNSPECIFIED",
 	}
 	return nil, &problemDetails
+}
+
+func HandleN32fErrorReport(request *http_wrapper.Request) *http_wrapper.Response {
+	logger.Handshake.Infof("handle PostN32fTerminate")
+
+	n32fErrorInfo := request.Body.(models.N32fErrorInfo)
+
+	problemDetails := N32fErrorReportProcedure(n32fErrorInfo)
+
+	if problemDetails == nil {
+		return http_wrapper.NewResponse(http.StatusNoContent, nil, nil)
+	} else if problemDetails != nil {
+		return http_wrapper.NewResponse(int(problemDetails.Status), nil, problemDetails)
+	}
+	problemDetails = &models.ProblemDetails{
+		Status: http.StatusForbidden,
+		Cause:  "UNSPECIFIED",
+	}
+	return http_wrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
+}
+
+func N32fErrorReportProcedure(n32fErrorInfo models.N32fErrorInfo) *models.ProblemDetails {
+
+	var request http.Request
+	self := sepp_context.GetSelf()
+	if value, ok := self.MessagePool.Load(n32fErrorInfo.N32fMessageId); !ok {
+		return nil
+	} else {
+		request = value.(http.Request)
+	}
+	sbiTargetApiRoot := request.Header.Get("3gpp-Sbi-Target-apiRoot")
+	temp := strings.Split(sbiTargetApiRoot, "://")
+	temp = strings.Split(temp[1], ":")
+	plmnId := temp[0]
+	remoteSeppAddr, _ := self.FqdnIpMap[plmnId]
+	plmnSecInfo := self.PLMNSecInfo[plmnId]
+	n32fContext := self.N32fContextPool[plmnSecInfo.N32fContexId]
+	go func() {
+		consumer.SendN32fContextTerminate(remoteSeppAddr, n32fContext.PeerInformation.RemotePlmnId, models.N32fContextInfo{N32fContextId: n32fContext.N32fContextId})
+		capability, ok := consumer.SendExchangeCapability(remoteSeppAddr)
+		if !ok {
+			return
+		}
+		if *capability == models.SecurityCapability_PRINS {
+			consumer.ExchangeCiphersuite(remoteSeppAddr, plmnId)
+			consumer.ExchangeProtectionPolicy(remoteSeppAddr, plmnId)
+			consumer.ExchangeIPXInfo(remoteSeppAddr, plmnId)
+		}
+	}()
+	return nil
+	// switch n32fErrorInfo.N32fErrorType {
+	// case models.N32fErrorType_CONTEXT_NOT_FOUND:
+
+	// case models.N32fErrorType_DECIPHERING_FAILED:
+	// 	//TODO
+	// case models.N32fErrorType_ENCRYPTION_KEY_EXPIRED:
+
+	// case models.N32fErrorType_INTEGRITY_CHECK_FAILED:
+
+	// case models.N32fErrorType_INTEGRITY_CHECK_ON_MODIFICATIONS_FAILED:
+
+	// case models.N32fErrorType_INTEGRITY_KEY_EXPIRED:
+
+	// case models.N32fErrorType_MESSAGE_RECONSTRUCTION_FAILED:
+
+	// case models.N32fErrorType_MODIFICATIONS_INSTRUCTIONS_FAILED:
+
+	// case models.N32fErrorType_POLICY_MISMATCH:
+
+	// }
 }

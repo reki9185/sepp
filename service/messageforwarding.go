@@ -79,12 +79,10 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			Cause:  "SYSTEM_FAILURE",
 		}
 		logger.Messageforward.Errorf("3gpp-Sbi-Target-apiRoot header missing")
-		rspWriter.WriteHeader(http.StatusBadRequest)
-		rsp, err := json.Marshal(problemDetail)
-		if err != nil {
-			logger.Messageforward.Errorf("Encode problemDetail error: %+v", err)
-		}
-		rspWriter.Write(rsp)
+		rsp := http_wrapper.NewResponse(int(problemDetail.Status), nil, problemDetail)
+		responseBody, _ := openapi.Serialize(rsp.Body, "application/json")
+		rspWriter.WriteHeader(rsp.Status)
+		rspWriter.Write(responseBody)
 		return
 	}
 	temp := strings.Split(sbiTargetApiRoot, "://")
@@ -160,17 +158,15 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			}
 			logger.Messageforward.Errorf("Target plmn not support")
 			rspWriter.WriteHeader(http.StatusBadRequest)
-			rsp, err := json.Marshal(problemDetail)
-			if err != nil {
-				logger.Messageforward.Errorf("Encode problemDetail error: %+v", err)
-			}
-			rspWriter.Write(rsp)
+			rsp := http_wrapper.NewResponse(http.StatusBadRequest, nil, problemDetail)
+			responseBody, _ := openapi.Serialize(rsp.Body, "application/json")
+			rspWriter.Write(responseBody)
 			return
 		}
-		secInfo, _ := self.PLMNSecInfo[plmnId]
-		if secInfo.SecCap == "" {
+		secInfo, ok := self.PLMNSecInfo[plmnId]
+		if !ok {
 			logger.Messageforward.Infoln("Start handshake procedure:", plmnId)
-			_, ok := consumer.SendExchangeCapability(remoteSeppAddr)
+			securityCapability, ok := consumer.SendExchangeCapability(remoteSeppAddr)
 			if !ok {
 				problemDetail := models.ProblemDetails{
 					Title:  "can't reach remote SEPP",
@@ -185,10 +181,11 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				}
 				rspWriter.Write(rsp)
 				return
+			} else if *securityCapability == models.SecurityCapability_PRINS {
+				consumer.ExchangeCiphersuite(remoteSeppAddr, plmnId)
+				consumer.ExchangeProtectionPolicy(remoteSeppAddr, plmnId)
+				consumer.ExchangeIPXInfo(remoteSeppAddr, plmnId)
 			}
-			consumer.ExchangeCiphersuite(remoteSeppAddr, plmnId)
-			consumer.ExchangeProtectionPolicy(remoteSeppAddr, plmnId)
-			consumer.ExchangeIPXInfo(remoteSeppAddr, plmnId)
 		}
 		if secInfo.SecCap == models.SecurityCapability_TLS {
 			logger.Messageforward.Infoln("start tls forwarding procedure")
@@ -229,7 +226,15 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			var dataToIntegrityProtectBlock models.DataToIntegrityProtectBlock
 			var dataToIntegrityProtectAndCipherBlock models.DataToIntegrityProtectAndCipherBlock
 			n32fContext := self.N32fContextPool[secInfo.N32fContexId]
-			messageId := fmt.Sprintf("%x", rand.Uint64())
+			var messageId string
+			for {
+				temp := fmt.Sprintf("%x", rand.Uint64())
+				if _, ok := self.MessagePool.Load(temp); !ok {
+					self.MessagePool.Store(temp, request)
+					messageId = temp
+					break
+				}
+			}
 			metaData := models.MetaData{
 				N32fContextId:   n32fContext.N32fContextId,
 				MessageId:       messageId,
@@ -283,6 +288,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 					logger.Messageforward.Errorf("Encode problemDetail error: %+v", err)
 				}
 				rspWriter.Write(rsp)
+				self.MessagePool.Delete(messageId)
 				return
 			}
 			idx := 0
@@ -339,7 +345,6 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 					}
 				}
 				if ie.IsModifiable {
-					fmt.Println("342", ie)
 					switch ie.IeLoc {
 					case models.IeLocation_HEADER:
 						for headerIdx, header := range headers {
@@ -467,7 +472,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				var problemDetails models.ProblemDetails
 				problemDetails.Cause = "32fContext not found"
 				problemDetails.Status = http.StatusForbidden
-				httpRsp := http_wrapper.NewResponse(http.StatusForbidden, nil, problemDetails)
+				httpRsp := http_wrapper.NewResponse(http.StatusInternalServerError, nil, problemDetails)
 				responseBody, err := openapi.Serialize(httpRsp.Body, "application/json")
 				if err != nil {
 					logger.N32fForward.Errorln(err)
@@ -485,6 +490,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 				} else {
 					rspWriter.Header().Add("Content-Type", "application/json")
 					rspWriter.Write(responseBody)
+					self.MessagePool.Delete(messageId)
+					return
 				}
 			}
 			sendRspKey := n32fContext.SecContext.SessionKeys.SendResKey
@@ -510,6 +517,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
 					}
 					rspWriter.Write(rsp)
+					self.MessagePool.Delete(messageId)
+					return
 				}
 
 				if problem := verifyJSONWebSignature(object, n32fContext.SecContext.IPXSecInfo, modifications.Identity); problem != nil {
@@ -519,6 +528,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
 					}
 					rspWriter.Write(rsp)
+					self.MessagePool.Delete(messageId)
+					return
 				}
 				var dataToIntegrityProtectBlockBeforePatch models.DataToIntegrityProtectBlock
 				var ieList []models.IeInfo
@@ -535,6 +546,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
 					}
 					rspWriter.Write(rsp)
+					self.MessagePool.Delete(messageId)
+					return
 				} else {
 					dataToIntegrityProtectBlockBeforePatch = *dataToIntegrityProtectBlock
 				}
@@ -550,6 +563,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
 					}
 					rspWriter.Write(rsp)
+					self.MessagePool.Delete(messageId)
+					return
 				}
 
 				if problem := verifyJSONWebSignature(object, self.SelfIPXSecInfo, modifications.Identity); problem != nil {
@@ -559,6 +574,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
 					}
 					rspWriter.Write(rsp)
+					self.MessagePool.Delete(messageId)
+					return
 				}
 				if dataToIntegrityProtectBlockBeforePatch, problem := verifyAndDoJsonPatch(dataToIntegrityProtectBlockBeforePatch, modifications, ieList); problem != nil {
 					rspWriter.WriteHeader(http.StatusInternalServerError)
@@ -567,6 +584,8 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 						logger.N32fForward.Errorf("Encode problemDetail error: %+v", err)
 					}
 					rspWriter.Write(rsp)
+					self.MessagePool.Delete(messageId)
+					return
 				} else {
 					dataToIntegrityProtectBlock = *dataToIntegrityProtectBlockBeforePatch
 				}
@@ -589,6 +608,7 @@ func HandleMessageForwarding(rspWriter http.ResponseWriter, request *http.Reques
 			rspWriter.WriteHeader(temp)
 
 			rspWriter.Write(rspBody)
+			self.MessagePool.Delete(messageId)
 			return
 		}
 	}

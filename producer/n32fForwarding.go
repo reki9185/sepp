@@ -331,8 +331,8 @@ func N32forwardMessageProcedure(n32fReformattedReqMsg models.N32fReformattedReqM
 		}
 	}
 	jweKey := self.N32fContextPool[n32fContextId].SecContext.SessionKeys.RecvResKey
-	seq := self.N32fContextPool[n32fContextId].SecContext.IVs.RecvReqSeq
-	n32fContext.SecContext.IVs.RecvReqSeq = seq + 1
+	seq := self.N32fContextPool[n32fContextId].SecContext.IVs.RecvResSeq
+	n32fContext.SecContext.IVs.RecvResSeq = seq + 1
 	self.N32fContextPool[n32fContextId] = n32fContext
 	iv := self.N32fContextPool[n32fContextId].SecContext.IVs.RecvResIV
 	if ieList == nil {
