@@ -6,7 +6,7 @@ package factory
 
 import (
 	"github.com/yangalan0903/openapi/models"
-	"github.com/yangalan0903/sepp/logger_util"
+	"github.com/reki9185/sepp/logger_util"
 )
 
 const (
@@ -48,6 +48,8 @@ type Sbi struct {
 }
 type FqdnIpMap struct {
 	Fqdn      string `yaml:"fqdn,omitempty"`
+	Scheme    string `yaml:"scheme,omitempty"`
+    Port      int    `yaml:"port,omitempty"`
 	IpForSbi  string `yaml:"ipForSBI,omitempty"`
 	IpForN32f string `yaml:"ipForN32f,omitempty"`
 }

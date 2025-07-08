@@ -1,0 +1,32 @@
+info:
+  version: 1.0.0
+  description: SEPP config for hPLMN (20910)
+
+logger:
+  enable: true
+  level: debug
+  reportCaller: false
+
+configuration:
+  fqdn: "hsepp.free5gc.org"
+
+  sbi:
+    scheme: http
+    registerIPv4: 192.168.56.111
+    bindingIPv4: 0.0.0.0
+    port: 29533
+    iPv4ForN32f: 192.168.56.111
+
+  fqdnSupportList:
+    - fqdn: "vsepp.free5gc.org"
+      scheme: http
+      port: 29533
+      ipForSBI: "192.168.56.109"
+      ipForN32f: "192.168.56.109"
+
+  nrfUri: "http://192.168.56.111:8000"
+  ipxUri: "http://192.168.56.111:29533"
+
+  plmnSupportList:
+    - mcc: "209"
+      mnc: "10"
